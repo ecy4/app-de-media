@@ -45,46 +45,62 @@ export default function UserProfile({
   // Determine target user ID
   const isSelf = !viewedCreator || viewedCreator.id === user?.id || viewedCreator.handle === `@${user?.user_metadata?.username}`;
   
-  // Display variables
+  const [profileData, setProfileData] = useState(null);
+  const [resolvedTargetId, setResolvedTargetId] = useState(isSelf ? user?.id : null);
+
+  // Display variables (prioritizing loaded profileData from database)
   const displayName = isSelf
     ? (user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Usuario')
-    : (viewedCreator.name || 'Creador');
+    : (profileData?.full_name || viewedCreator?.name || 'Creador');
 
   const displayHandle = isSelf
     ? (user?.user_metadata?.username || user?.email?.split('@')[0] || 'usuario')
-    : (viewedCreator.handle?.replace(/^@/, '') || 'creador');
+    : (profileData?.username || viewedCreator?.handle?.replace(/^@/, '') || 'creador');
 
   const displayAvatar = isSelf
     ? (user?.user_metadata?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email || 'user'}`)
-    : (viewedCreator.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${displayHandle}`);
+    : (profileData?.avatar_url || viewedCreator?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${displayHandle}`);
 
   const displayBio = isSelf
     ? (user?.user_metadata?.bio || 'Creador visual y coleccionista de ideas ✨')
-    : (viewedCreator.bio || 'Compartiendo fotografía, diseño y proyectos creativos en PinMedia.');
+    : (profileData?.bio || viewedCreator?.bio || 'Compartiendo fotografía, diseño y proyectos creativos en PinMedia.');
 
-  const displayWebsite = isSelf ? user?.user_metadata?.website : viewedCreator.website;
-  const displayRole = isSelf ? (user?.user_metadata?.role || 'user') : (viewedCreator.role || 'user');
+  const displayWebsite = isSelf ? user?.user_metadata?.website : (profileData?.website || viewedCreator?.website);
+  const displayRole = isSelf ? (user?.user_metadata?.role || 'user') : (profileData?.role || viewedCreator?.role || 'user');
 
-  const [resolvedTargetId, setResolvedTargetId] = useState(isSelf ? user?.id : null);
-
-  // Load Real Follow Stats from Supabase 'user_follows' table
+  // Load Real Profile & Follow Stats from Supabase
   useEffect(() => {
-    async function loadFollows() {
-      let finalId = isSelf ? user?.id : viewedCreator?.id;
-
-      // If id is not a UUID (e.g. it's a handle like '@angel'), resolve it from profiles
-      if (!isSelf && finalId && !finalId.includes('-')) {
-        try {
-          const { supabase } = await import('../lib/supabaseClient');
-          const { data } = await supabase
-            .from('profiles')
-            .select('id')
-            .eq('username', displayHandle)
-            .maybeSingle();
-          if (data) finalId = data.id;
-        } catch (err) {
-          console.error('Error resolving profile ID:', err);
+    async function loadCreatorProfileAndFollows() {
+      if (isSelf) {
+        setResolvedTargetId(user?.id);
+        if (user?.id) {
+          const stats = await fetchCreatorFollowStats(user.id);
+          setFollowStats(stats);
         }
+        return;
+      }
+
+      let finalId = viewedCreator?.id;
+      const lookupHandle = viewedCreator?.handle?.replace(/^@/, '') || viewedCreator?.id?.replace(/^@/, '');
+
+      try {
+        const { supabase } = await import('../lib/supabaseClient');
+        let query = supabase.from('profiles').select('*');
+
+        if (finalId && finalId.includes('-') && finalId.length >= 32) {
+          query = query.eq('id', finalId);
+        } else if (lookupHandle) {
+          query = query.eq('username', lookupHandle);
+        }
+
+        const { data: dbProfile, error } = await query.maybeSingle();
+
+        if (dbProfile) {
+          setProfileData(dbProfile);
+          finalId = dbProfile.id;
+        }
+      } catch (err) {
+        console.error('Error fetching creator profile:', err);
       }
 
       setResolvedTargetId(finalId);
@@ -93,14 +109,14 @@ export default function UserProfile({
         const stats = await fetchCreatorFollowStats(finalId);
         setFollowStats(stats);
 
-        if (!isSelf && user?.id) {
+        if (user?.id) {
           const following = await checkIsFollowingUser(user.id, finalId);
           setIsFollowing(following);
         }
       }
     }
-    loadFollows();
-  }, [viewedCreator, isSelf, user?.id, displayHandle]);
+    loadCreatorProfileAndFollows();
+  }, [viewedCreator, isSelf, user?.id]);
 
   const handleFollowToggle = async () => {
     if (!user) {
