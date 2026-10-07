@@ -763,9 +763,22 @@ export default function PinDetailModal({
 
                 {/* Title & Description */}
                 <div className="mt-5">
-                  <span className="inline-block px-2.5 py-0.5 rounded-full bg-neutral-800 text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-2">
-                    {pin.category || 'LayoutHub Resource'}
-                  </span>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="inline-block px-2.5 py-0.5 rounded-full bg-neutral-800 text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
+                      {pin.category || 'LayoutHub Resource'}
+                    </span>
+                    {pin.source_provider === 'openverse' && (
+                      <a 
+                        href={pin.download_url || pin.mediaUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-block px-2.5 py-0.5 rounded-full bg-blue-500/20 text-[10px] font-bold text-blue-400 uppercase tracking-wider hover:bg-blue-500/30 transition-colors"
+                        title={`Licencia: ${pin.license || 'CC'} - Clic para origen`}
+                      >
+                        Openverse CC
+                      </a>
+                    )}
+                  </div>
                   <h1 className="text-xl sm:text-2xl font-black text-white leading-tight">
                     {pin.title}
                   </h1>

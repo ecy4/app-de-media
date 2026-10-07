@@ -87,7 +87,9 @@ function normalizeMediaItem({
     comments: [],
     source_provider: sourceProvider,
     sourceProvider,
-    isExternal: true
+    isExternal: true,
+    download_url: arguments[0].downloadUrl,
+    license: arguments[0].license
   };
 }
 
@@ -217,6 +219,46 @@ async function fetchUnsplashProvider({ searchTerm, category, orientation = 'all'
 }
 
 /**
+ * Openverse API with Design Keywords (No Key Required)
+ */
+async function fetchOpenverseProvider({ searchTerm, category, orientation = 'all', page, perPage }) {
+  let openverseOri = '';
+  if (orientation === 'vertical') openverseOri = '&aspect_ratio=tall';
+  if (orientation === 'horizontal') openverseOri = '&aspect_ratio=wide';
+
+  const res = await fetch(
+    `https://api.openverse.org/v1/images/?q=${encodeURIComponent(searchTerm || 'creative design')}${openverseOri}&page=${page}&page_size=${perPage}&format=json`
+  );
+
+  if (!res.ok) throw new Error(`Openverse error: ${res.status}`);
+  const data = await res.json();
+
+  return (data.results || []).map((item, idx) => {
+    return normalizeMediaItem({
+      id: `openverse-${item.id}`,
+      title: item.title || 'Creative Reference',
+      type: 'image',
+      mediaUrl: item.url || item.thumbnail,
+      thumbnail: item.thumbnail || item.url,
+      category: category !== 'all' ? category : 'openverse',
+      author: {
+        id: `openverse-user-${idx}`,
+        name: item.creator || 'Openverse Contributor',
+        handle: `@${(item.creator || 'openverse').toLowerCase().replace(/[^a-z0-9_]/g, '')}`,
+        avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${item.creator || 'openverse'}`,
+      },
+      description: item.title || 'Creative Commons Media via Openverse',
+      aspectRatio: 'aspect-[3/4]',
+      likes: 0,
+      tags: item.tags?.map(t => t.name).slice(0, 4) || [category],
+      sourceProvider: 'openverse',
+      downloadUrl: item.foreign_landing_url || item.url,
+      license: item.license || 'CC'
+    });
+  });
+}
+
+/**
  * Open Fallback Provider for Graphic Designers
  */
 function getOpenFallbackProvider({ searchTerm, category, orientation = 'all', page, perPage }) {
@@ -327,6 +369,14 @@ export async function fetchFeedMedia({
       })
     );
   }
+
+  // 3. Openverse (Always active, no API key needed)
+  providerPromises.push(
+    fetchOpenverseProvider(queryParams).catch(err => {
+      console.warn('[LayoutHub MultiProvider] Openverse failed:', err.message);
+      return [];
+    })
+  );
 
   let settledResults = [];
   if (providerPromises.length > 0) {

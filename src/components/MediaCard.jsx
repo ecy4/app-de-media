@@ -183,9 +183,22 @@ export default function MediaCard({
           
           <div className="flex items-center gap-2 shrink-0">
             {pin.source_provider && pin.source_provider !== 'supabase' && (
-              <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">
-                {pin.source_provider}
-              </span>
+              pin.source_provider === 'openverse' ? (
+                <a 
+                  href={pin.download_url || pin.mediaUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-blue-100 text-blue-600 hover:bg-blue-200 transition-colors"
+                  title="Licencia CC - Ver original en Openverse"
+                >
+                  Openverse CC
+                </a>
+              ) : (
+                <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">
+                  {pin.source_provider}
+                </span>
+              )
             )}
             <div className="flex items-center gap-1 text-gray-400 font-medium">
               <Heart className="w-3.5 h-3.5 fill-gray-200 text-gray-400" />
