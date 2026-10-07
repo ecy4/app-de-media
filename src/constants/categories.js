@@ -4,15 +4,15 @@
 
 export const CATEGORIES = [
   { id: 'all', label: 'Todos', query: 'aesthetic visual' },
-  { id: 'photography', label: 'Fotografía', query: 'portrait street landscape photography' },
-  { id: 'videos', label: 'Videos', query: 'cinematic 4k motion video' },
-  { id: 'digital-art', label: 'Arte Digital', query: '3d render digital art cyberpunk surreal' },
-  { id: 'ui-design', label: 'Diseño UI', query: 'ui ux web mobile interface design' },
-  { id: 'architecture', label: 'Arquitectura', query: 'modern architecture brutalism interior' },
-  { id: 'nature', label: 'Naturaleza', query: 'wild nature forest mountains ocean' },
-  { id: 'fashion', label: 'Moda', query: 'high fashion runway streetwear editorial' },
-  { id: 'minimalism', label: 'Minimalismo', query: 'minimalist design monochrome clean aesthetic' },
-  { id: 'tech', label: 'Tecnología', query: 'technology workspace future gadgets concept' }
+  { id: 'photography', label: 'Fotografía', query: 'photography street portrait landscape' },
+  { id: 'videos', label: 'Videos', query: 'motion cinematic 4k' },
+  { id: 'digital-art', label: 'Arte Digital', query: 'digital art illustration render 3d' },
+  { id: 'ui-design', label: 'Diseño & UI', query: 'graphic design interface mobile app web vector' },
+  { id: 'tech', label: 'Tecnología', query: 'computer robot electronic gadget coding cyber' },
+  { id: 'architecture', label: 'Arquitectura', query: 'architecture interior building modern structure' },
+  { id: 'nature', label: 'Naturaleza', query: 'wild nature forest mountains ocean animal' },
+  { id: 'fashion', label: 'Moda', query: 'fashion style outfit model clothes' },
+  { id: 'minimalism', label: 'Minimalismo', query: 'minimalist clean simple monochrome aesthetic' }
 ];
 
 export const FEATURED_TRENDS = [

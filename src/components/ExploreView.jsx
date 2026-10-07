@@ -9,11 +9,13 @@ import {
   Loader2
 } from 'lucide-react';
 import MasonryGrid from './MasonryGrid';
+import CategoryBar from './CategoryBar';
 import { FEATURED_TRENDS } from '../constants/categories';
 
 export default function ExploreView({ 
   pins, 
   savedPinIds, 
+  selectedCategory = 'all',
   onPinClick, 
   onToggleSave, 
   onShare, 
@@ -108,8 +110,16 @@ export default function ExploreView({
         </div>
       </div>
 
+      {/* Categories Bar inside Explore */}
+      <div className="mb-6 -mx-2 sm:mx-0">
+        <CategoryBar
+          selectedCategory={selectedCategory}
+          onSelectCategory={onSelectCategory}
+        />
+      </div>
+
       {/* Media Type Filter Tabs */}
-      <div className="flex items-center justify-between border-b border-gray-100 pb-3 mb-6">
+      <div className="flex flex-wrap items-center justify-between border-b border-gray-100 pb-3 mb-6 gap-3">
         <div className="flex items-center gap-2">
           <button
             onClick={() => setMediaTypeFilter('all')}

@@ -8,8 +8,12 @@ const UNSPLASH_KEY = import.meta.env.VITE_UNSPLASH_ACCESS_KEY;
 const PEXELS_KEY = import.meta.env.VITE_PEXELS_API_KEY;
 const PIXABAY_KEY = import.meta.env.VITE_PIXABAY_API_KEY;
 
+import { CATEGORIES } from '../constants/categories';
+
 export async function fetchFeedMedia({ category = 'all', query = '', mediaType = 'all', page = 1, perPage = 24 }) {
-  const searchTerm = query.trim() || (category !== 'all' ? category : '');
+  const catObj = CATEGORIES.find(c => c.id === category);
+  const resolvedCategoryQuery = catObj ? (catObj.id === 'all' ? '' : catObj.query) : category;
+  const searchTerm = query.trim() || resolvedCategoryQuery || '';
 
   // 1. PIXABAY API (Images & Videos)
   if (PIXABAY_KEY && PIXABAY_KEY !== 'tu-pixabay-api-key') {

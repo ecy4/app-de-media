@@ -505,6 +505,7 @@ function AppContent() {
         <ExploreView
           pins={allPins}
           savedPinIds={savedPinIds}
+          selectedCategory={selectedCategory}
           onPinClick={openPinDetail}
           onToggleSave={handleToggleSave}
           onShare={handleShare}
@@ -515,7 +516,6 @@ function AppContent() {
           isLoadingMore={loadingMore}
           onSelectCategory={(cat) => {
             setSelectedCategory(cat);
-            navigateTo('home', { category: cat });
           }}
         />
       ) : (
