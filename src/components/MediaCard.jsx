@@ -181,9 +181,16 @@ export default function MediaCard({
             </span>
           </div>
           
-          <div className="flex items-center gap-1 text-gray-400 shrink-0 font-medium">
-            <Heart className="w-3.5 h-3.5 fill-gray-200 text-gray-400" />
-            <span>{pin.likes > 1000 ? `${(pin.likes / 1000).toFixed(1)}k` : pin.likes || 0}</span>
+          <div className="flex items-center gap-2 shrink-0">
+            {pin.source_provider && pin.source_provider !== 'supabase' && (
+              <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">
+                {pin.source_provider}
+              </span>
+            )}
+            <div className="flex items-center gap-1 text-gray-400 font-medium">
+              <Heart className="w-3.5 h-3.5 fill-gray-200 text-gray-400" />
+              <span>{pin.likes > 1000 ? `${(pin.likes / 1000).toFixed(1)}k` : pin.likes || 0}</span>
+            </div>
           </div>
         </div>
       </div>
