@@ -297,18 +297,19 @@ export default function UserProfile({
             </button>
           )}
 
-          <button
-            onClick={() => {
-              if (navigator.clipboard) {
-                navigator.clipboard.writeText(window.location.href);
-                onShowToast?.('¡Enlace de perfil copiado al portapapeles!');
-              }
-            }}
-            className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-full text-xs font-bold flex items-center gap-1.5 transition-colors"
-          >
-            <Share2 className="w-3.5 h-3.5" />
-            <span>Compartir</span>
-          </button>
+            <button
+              onClick={() => {
+                if (navigator.clipboard) {
+                  navigator.clipboard.writeText(window.location.href);
+                  onShowToast?.('¡Enlace de perfil copiado al portapapeles!');
+                }
+              }}
+              className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-full text-xs font-bold flex items-center gap-1.5 transition-colors"
+            >
+              <Share2 className="w-3.5 h-3.5" />
+              <span>Compartir</span>
+            </button>
+          </div>
         </div>
       </div>
 
