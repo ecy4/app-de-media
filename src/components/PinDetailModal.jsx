@@ -623,6 +623,7 @@ export default function PinDetailModal({
                 </div>
               )}
             </div>
+          </div>
 
           {/* Right Column: Moodboards & Details */}
           {!isFocusMode && (
