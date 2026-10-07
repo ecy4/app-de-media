@@ -15,6 +15,7 @@ import {
 import MediaCard from './MediaCard';
 import { useAuth } from '../context/AuthContext';
 import { sanitizeInput, validateSafeUrl } from '../utils/security';
+import { renderWithMentions } from '../utils/mentions';
 
 export default function PinDetailModal({ 
   pin, 
@@ -246,7 +247,7 @@ export default function PinDetailModal({
                   {pin.title}
                 </h1>
                 <p className="text-gray-600 text-sm mt-3 leading-relaxed">
-                  {pin.description}
+                  {renderWithMentions(pin.description, onAuthorClick)}
                 </p>
 
                 {/* Safe Destination URL link */}
@@ -351,7 +352,12 @@ export default function PinDetailModal({
                           <span className="font-bold text-gray-900">{cm.author}</span>
                           <span className="text-[10px] text-gray-400">{cm.time}</span>
                         </div>
-                        <p className="text-gray-700 mt-1">{cm.text}</p>
+                        <p className="text-gray-700 mt-1">
+                          {renderWithMentions(cm.text, (authorObj) => {
+                             onClose();
+                             if (onAuthorClick) onAuthorClick(authorObj);
+                          })}
+                        </p>
                       </div>
                     </div>
                   ))

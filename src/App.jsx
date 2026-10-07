@@ -362,9 +362,20 @@ function AppContent() {
           if (user) markNotificationsAsReadInDb(user.id);
         }}
         onNotificationClick={(n) => {
-          if (n.pin_id) {
+          if (n.type === 'follow' && n.sender_name) {
+            // For follow notifications, navigate directly to their profile
+            handleOpenCreatorProfile({ id: n.sender_id, handle: n.sender_name });
+          } else if (n.pin_id) {
+            // For pin-related notifications, try opening the pin
             const target = allPins.find(p => p.id === n.pin_id);
-            if (target) openPinDetail(target);
+            if (target) {
+              openPinDetail(target);
+            } else {
+              // If pin not loaded in current view, fallback to their profile
+              handleOpenCreatorProfile({ id: n.sender_id, handle: n.sender_name });
+            }
+          } else if (n.sender_name) {
+            handleOpenCreatorProfile({ id: n.sender_id, handle: n.sender_name });
           }
         }}
         onClearNotification={(id) => {

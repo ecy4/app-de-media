@@ -76,11 +76,24 @@ export function AuthProvider({ children }) {
     }
   };
 
-  // 3. Real Supabase Login (Email & Password)
-  const login = async (email, password) => {
+  // 3. Real Supabase Login (Email & Password & Username)
+  const login = async (emailOrUsername, password) => {
     if (!supabase) throw new Error('Supabase no está conectado.');
+    
+    let loginEmail = emailOrUsername;
+    
+    // If it doesn't contain '@', treat it as a username
+    if (!emailOrUsername.includes('@')) {
+      const cleanUsername = emailOrUsername.replace(/^@/, '');
+      const { data, error } = await supabase.rpc('get_email_by_username', { p_username: cleanUsername });
+      if (error || !data) {
+        throw new Error('Nombre de usuario no encontrado.');
+      }
+      loginEmail = data;
+    }
+
     const { data, error } = await supabase.auth.signInWithPassword({
-      email,
+      email: loginEmail,
       password,
     });
     if (error) throw error;
