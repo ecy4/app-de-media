@@ -137,9 +137,14 @@ function AppContent() {
       setActiveView('profile');
     } else {
       setViewedCreator(null);
-      setActiveView(viewParam);
+      const userRole = user?.role || user?.user_metadata?.role || 'user';
+      if (viewParam === 'admin' && userRole !== 'admin') {
+        setActiveView('home');
+      } else {
+        setActiveView(viewParam);
+      }
     }
-  }, []);
+  }, [user]);
 
   // Sync on mount and on popstate (Browser Back / Forward buttons)
   useEffect(() => {
@@ -313,14 +318,47 @@ function AppContent() {
 
   // Admin moderation handlers
   const handleDeletePin = async (pinId) => {
-    setSupabasePins(prev => prev.filter(p => p.id !== pinId));
-    setApiPins(prev => prev.filter(p => p.id !== pinId));
-    showToast('Pin eliminado.');
+    if (user?.role !== 'admin' && user?.user_metadata?.role !== 'admin') {
+      showToast('Acceso denegado: se requiere rol de Administrador.', true);
+      return;
+    }
+
+    try {
+      const { supabase } = await import('./lib/supabaseClient');
+      if (supabase) {
+        const { error } = await supabase.from('pins').delete().eq('id', pinId);
+        if (error) throw error;
+      }
+      setSupabasePins(prev => prev.filter(p => p.id !== pinId));
+      setApiPins(prev => prev.filter(p => p.id !== pinId));
+      showToast('Pin eliminado permanentemente de Supabase.');
+    } catch (err) {
+      console.error('Error deleting pin:', err);
+      showToast(err.message || 'Error al eliminar el pin de la base de datos', true);
+    }
   };
 
-  const handleToggleHidePin = (pinId) => {
-    setSupabasePins(prev => prev.map(p => p.id === pinId ? { ...p, isHidden: !p.isHidden } : p));
-    showToast('Visibilidad actualizada.');
+  const handleToggleHidePin = async (pinId) => {
+    if (user?.role !== 'admin' && user?.user_metadata?.role !== 'admin') {
+      showToast('Acceso denegado: se requiere rol de Administrador.', true);
+      return;
+    }
+
+    const currentPin = allPins.find(p => p.id === pinId);
+    const newHiddenState = !currentPin?.isHidden;
+
+    try {
+      const { supabase } = await import('./lib/supabaseClient');
+      if (supabase) {
+        const { error } = await supabase.from('pins').update({ is_hidden: newHiddenState }).eq('id', pinId);
+        if (error) throw error;
+      }
+      setSupabasePins(prev => prev.map(p => p.id === pinId ? { ...p, isHidden: newHiddenState } : p));
+      showToast(newHiddenState ? 'Pin ocultado del feed público.' : 'Pin visible nuevamente.');
+    } catch (err) {
+      console.error('Error toggling pin visibility:', err);
+      showToast(err.message || 'Error al actualizar visibilidad', true);
+    }
   };
 
   const handleShare = (pin) => {
@@ -340,6 +378,8 @@ function AppContent() {
   if (!healthStatus.checking && !healthStatus.connected) {
     return <SupabaseConnectionError message={healthStatus.message} />;
   }
+
+  const currentUserRole = user?.role || user?.user_metadata?.role || 'user';
 
   return (
     <div className="min-h-screen bg-white text-gray-900 flex flex-col font-sans">
@@ -385,7 +425,7 @@ function AppContent() {
       />
 
       {/* Main Content Router */}
-      {activeView === 'admin' ? (
+      {activeView === 'admin' && currentUserRole === 'admin' ? (
         <AdminDashboard
           pins={allPins}
           onDeletePin={handleDeletePin}

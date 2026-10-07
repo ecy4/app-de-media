@@ -12,7 +12,10 @@ import {
   TrendingUp, 
   Search, 
   AlertTriangle,
-  Loader2 
+  Loader2,
+  Send,
+  Radio,
+  FileText
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabaseClient';
@@ -25,10 +28,15 @@ export default function AdminDashboard({
   onOpenPin 
 }) {
   const { user, updateProfile } = useAuth();
-  const [activeTab, setActiveTab] = useState('pins'); // 'pins' | 'users'
+  const [activeTab, setActiveTab] = useState('pins'); // 'pins' | 'users' | 'broadcast' | 'comments'
   const [searchTerm, setSearchTerm] = useState('');
   const [usersList, setUsersList] = useState([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
+  const [broadcastMessage, setBroadcastMessage] = useState('');
+  const [sendingBroadcast, setSendingBroadcast] = useState(false);
+  const [broadcastFeedback, setBroadcastFeedback] = useState(null);
+  const [allComments, setAllComments] = useState([]);
+  const [loadingComments, setLoadingComments] = useState(false);
 
   // Fetch real registered profiles from Supabase
   const loadProfiles = async () => {
@@ -50,12 +58,79 @@ export default function AdminDashboard({
     }
   };
 
+  // Fetch all comments across pins for moderation
+  const loadComments = async () => {
+    if (!supabase) return;
+    setLoadingComments(true);
+    try {
+      const { data, error } = await supabase
+        .from('comments')
+        .select('*, pins(title)')
+        .order('created_at', { ascending: false });
+
+      if (!error && data) {
+        setAllComments(data);
+      }
+    } catch (e) {
+      console.error('Error fetching comments:', e);
+    } finally {
+      setLoadingComments(false);
+    }
+  };
+
   useEffect(() => {
     loadProfiles();
+    loadComments();
   }, []);
 
   const totalLikes = pins.reduce((acc, p) => acc + (p.likes || 0), 0);
-  const totalComments = pins.reduce((acc, p) => acc + (p.comments?.length || 0), 0);
+  const totalComments = allComments.length || pins.reduce((acc, p) => acc + (p.comments?.length || 0), 0);
+
+  // Send global notification announcement to all users
+  const handleSendBroadcast = async (e) => {
+    e.preventDefault();
+    if (!broadcastMessage.trim() || !supabase) return;
+    setSendingBroadcast(true);
+    setBroadcastFeedback(null);
+
+    try {
+      // Create notification for every registered profile
+      const notificationsToInsert = usersList.map((usr) => ({
+        user_id: usr.id,
+        sender_id: user?.id,
+        sender_name: user?.user_metadata?.full_name || 'Equipo PinMedia',
+        sender_avatar: user?.user_metadata?.avatar_url,
+        type: 'admin_announcement',
+        message: `📢 Anuncio oficial: ${broadcastMessage.trim()}`
+      }));
+
+      if (notificationsToInsert.length > 0) {
+        const { error } = await supabase.from('notifications').insert(notificationsToInsert);
+        if (error) throw error;
+      }
+
+      setBroadcastFeedback({ success: true, text: `¡Anuncio enviado con éxito a ${usersList.length} usuarios!` });
+      setBroadcastMessage('');
+    } catch (err) {
+      console.error('Error sending broadcast:', err);
+      setBroadcastFeedback({ success: false, text: 'Error al enviar el anuncio general.' });
+    } finally {
+      setSendingBroadcast(false);
+    }
+  };
+
+  const handleDeleteComment = async (commentId) => {
+    if (!supabase) return;
+    if (!window.confirm('¿Eliminar este comentario permanentemente?')) return;
+    try {
+      const { error } = await supabase.from('comments').delete().eq('id', commentId);
+      if (!error) {
+        setAllComments(prev => prev.filter(c => c.id !== commentId));
+      }
+    } catch (err) {
+      console.error('Error deleting comment:', err);
+    }
+  };
 
   const handleToggleUserStatus = async (userId, currentStatus) => {
     if (!supabase) return;
@@ -224,7 +299,32 @@ export default function AdminDashboard({
               : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
           }`}
         >
-          Gestión de Usuarios Reales ({usersList.length})
+          Gestión de Usuarios ({usersList.length})
+        </button>
+
+        <button
+          onClick={() => {
+            setActiveTab('comments');
+            loadComments();
+          }}
+          className={`px-4 py-2 rounded-full text-xs font-bold transition-all ${
+            activeTab === 'comments'
+              ? 'bg-black text-white'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+          }`}
+        >
+          Moderación de Comentarios ({allComments.length})
+        </button>
+
+        <button
+          onClick={() => setActiveTab('broadcast')}
+          className={`px-4 py-2 rounded-full text-xs font-bold transition-all ${
+            activeTab === 'broadcast'
+              ? 'bg-black text-white'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+          }`}
+        >
+          📢 Enviar Anuncio Global
         </button>
       </div>
 
@@ -443,6 +543,141 @@ export default function AdminDashboard({
               </table>
             )}
           </div>
+        </div>
+      )}
+
+      {/* Tab 3: Moderación de Comentarios */}
+      {activeTab === 'comments' && (
+        <div className="bg-white border border-gray-100 rounded-3xl shadow-sm overflow-hidden">
+          <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+            <h3 className="font-bold text-sm text-gray-900">Comentarios publicados en pines</h3>
+            <button
+              onClick={loadComments}
+              className="text-xs font-bold text-[#E60023] hover:underline"
+            >
+              Actualizar
+            </button>
+          </div>
+
+          <div className="overflow-x-auto">
+            {loadingComments ? (
+              <div className="py-12 flex items-center justify-center gap-2 text-xs text-gray-500">
+                <Loader2 className="w-4 h-4 animate-spin text-[#E60023]" />
+                <span>Cargando comentarios...</span>
+              </div>
+            ) : allComments.length === 0 ? (
+              <div className="py-12 text-center text-xs text-gray-400">
+                No hay comentarios registrados.
+              </div>
+            ) : (
+              <table className="w-full text-left text-xs">
+                <thead className="bg-gray-50 text-gray-500 uppercase font-bold text-[10px]">
+                  <tr>
+                    <th className="p-4">Autor</th>
+                    <th className="p-4">Comentario</th>
+                    <th className="p-4">Pin Asociado</th>
+                    <th className="p-4">Fecha</th>
+                    <th className="p-4 text-right">Acción</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {allComments.map((cm) => (
+                    <tr key={cm.id} className="hover:bg-gray-50/80 transition-colors">
+                      <td className="p-4 font-semibold text-gray-900 flex items-center gap-2">
+                        <img
+                          src={cm.author_avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=60&q=80'}
+                          alt=""
+                          className="w-6 h-6 rounded-full object-cover"
+                        />
+                        <span>{cm.author_name}</span>
+                      </td>
+                      <td className="p-4 text-gray-700 max-w-xs">{cm.text}</td>
+                      <td className="p-4 text-gray-500 max-w-[150px] truncate">
+                        {cm.pins?.title || 'Pin #' + cm.pin_id.slice(0, 8)}
+                      </td>
+                      <td className="p-4 text-gray-400 text-[10px]">
+                        {new Date(cm.created_at).toLocaleString()}
+                      </td>
+                      <td className="p-4 text-right">
+                        <button
+                          onClick={() => handleDeleteComment(cm.id)}
+                          className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          title="Borrar comentario ofensivo"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Tab 4: Anuncios Globales / Notificaciones Masivas */}
+      {activeTab === 'broadcast' && (
+        <div className="bg-white border border-gray-100 rounded-3xl shadow-sm p-6 max-w-2xl mx-auto">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2.5 bg-red-50 text-[#E60023] rounded-2xl">
+              <Radio className="w-6 h-6 animate-pulse" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-gray-900">Transmisión de Anuncios Oficiales</h2>
+              <p className="text-xs text-gray-500">
+                Envía una notificación de alta prioridad a la campanita de todos los usuarios registrados.
+              </p>
+            </div>
+          </div>
+
+          <form onSubmit={handleSendBroadcast} className="space-y-4">
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                Mensaje del Anuncio
+              </label>
+              <textarea
+                required
+                rows={4}
+                maxLength={300}
+                value={broadcastMessage}
+                onChange={(e) => setBroadcastMessage(e.target.value)}
+                placeholder="Ejemplo: ¡Mantenimiento programado hoy a las 23:00 hrs! Nueva actualización disponible..."
+                className="w-full p-3.5 bg-gray-50 border border-gray-200 rounded-2xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-[#E60023] transition-all resize-none"
+              />
+              <span className="text-[10px] text-gray-400 block text-right mt-1">
+                {broadcastMessage.length}/300 caracteres
+              </span>
+            </div>
+
+            {broadcastFeedback && (
+              <div className={`p-3 rounded-xl text-xs font-semibold ${
+                broadcastFeedback.success 
+                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
+                  : 'bg-rose-50 text-rose-700 border border-rose-200'
+              }`}>
+                {broadcastFeedback.text}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={sendingBroadcast || !broadcastMessage.trim()}
+              className="w-full py-3 bg-[#E60023] hover:bg-[#ad081b] disabled:opacity-40 text-white rounded-full font-bold text-xs sm:text-sm shadow-md transition-all flex items-center justify-center gap-2"
+            >
+              {sendingBroadcast ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Transmitiendo a {usersList.length} usuarios...</span>
+                </>
+              ) : (
+                <>
+                  <Send className="w-4 h-4" />
+                  <span>Enviar a todos ({usersList.length} usuarios)</span>
+                </>
+              )}
+            </button>
+          </form>
         </div>
       )}
     </div>
