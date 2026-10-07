@@ -337,6 +337,29 @@ export async function togglePinLikeInDb(userId, pinId) {
     return false;
   } else {
     await supabase.from('pin_likes').insert({ user_id: userId, pin_id: pinId });
+    
+    // Send real-time notification to pin owner
+    try {
+      const [{ data: pinData }, { data: senderData }] = await Promise.all([
+        supabase.from('pins').select('user_id, title').eq('id', pinId).maybeSingle(),
+        supabase.from('profiles').select('full_name, avatar_url').eq('id', userId).maybeSingle()
+      ]);
+
+      if (pinData?.user_id && pinData.user_id !== userId && senderData) {
+        await supabase.from('notifications').insert({
+          user_id: pinData.user_id,
+          sender_id: userId,
+          sender_name: senderData.full_name || 'Alguien',
+          sender_avatar: senderData.avatar_url,
+          pin_id: pinId,
+          type: 'like',
+          message: `le dio me gusta a tu pin "${pinData.title?.slice(0, 30) || 'Publicación'}" ❤️`
+        });
+      }
+    } catch (e) {
+      console.warn('Could not send like notification:', e);
+    }
+
     return true;
   }
 }
@@ -374,6 +397,29 @@ export async function togglePinSaveInDb(userId, pinId) {
     return false;
   } else {
     await supabase.from('saved_pins').insert({ user_id: userId, pin_id: pinId });
+
+    // Send real-time notification to pin owner
+    try {
+      const [{ data: pinData }, { data: senderData }] = await Promise.all([
+        supabase.from('pins').select('user_id, title').eq('id', pinId).maybeSingle(),
+        supabase.from('profiles').select('full_name, avatar_url').eq('id', userId).maybeSingle()
+      ]);
+
+      if (pinData?.user_id && pinData.user_id !== userId && senderData) {
+        await supabase.from('notifications').insert({
+          user_id: pinData.user_id,
+          sender_id: userId,
+          sender_name: senderData.full_name || 'Alguien',
+          sender_avatar: senderData.avatar_url,
+          pin_id: pinId,
+          type: 'save',
+          message: `guardó tu pin "${pinData.title?.slice(0, 30) || 'Publicación'}" en su colección 📌`
+        });
+      }
+    } catch (e) {
+      console.warn('Could not send save notification:', e);
+    }
+
     return true;
   }
 }
@@ -402,6 +448,29 @@ export async function addCommentToSupabase(pinId, userId, authorName, authorAvat
     .single();
 
   if (error) throw error;
+
+  // Send real-time notification to pin owner
+  try {
+    const { data: pinData } = await supabase
+      .from('pins')
+      .select('user_id, title')
+      .eq('id', pinId)
+      .maybeSingle();
+
+    if (pinData?.user_id && pinData.user_id !== userId) {
+      await supabase.from('notifications').insert({
+        user_id: pinData.user_id,
+        sender_id: userId,
+        sender_name: sanitizeInput(authorName),
+        sender_avatar: authorAvatar,
+        pin_id: pinId,
+        type: 'comment',
+        message: `comentó en tu pin "${pinData.title?.slice(0, 25) || 'Publicación'}": "${cleanText.slice(0, 35)}..." 💬`
+      });
+    }
+  } catch (e) {
+    console.warn('Could not send comment notification:', e);
+  }
 
   return {
     id: data.id,

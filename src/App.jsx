@@ -85,6 +85,17 @@ function AppContent() {
       }
     }
     loadUserInteractions();
+
+    // Periodic notifications check every 15 seconds
+    const interval = setInterval(() => {
+      if (user?.id && healthStatus.connected) {
+        fetchUserNotifications(user.id).then(notifs => {
+          if (notifs) setNotifications(notifs);
+        }).catch(() => {});
+      }
+    }, 15000);
+
+    return () => clearInterval(interval);
   }, [user?.id, healthStatus.connected]);
 
   // 3. Fetch Dynamic Media from API (returns empty if no keys configured)
