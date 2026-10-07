@@ -427,7 +427,7 @@ function AppContent() {
       {/* Main Content Router */}
       {activeView === 'admin' && currentUserRole === 'admin' ? (
         <AdminDashboard
-          pins={allPins}
+          pins={supabasePins}
           onDeletePin={handleDeletePin}
           onToggleHidePin={handleToggleHidePin}
           onClose={() => handleNavigateView('home')}

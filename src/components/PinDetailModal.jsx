@@ -10,7 +10,8 @@ import {
   MessageSquare,
   Globe,
   UserCheck,
-  UserPlus
+  UserPlus,
+  Flag
 } from 'lucide-react';
 import MediaCard from './MediaCard';
 import { useAuth } from '../context/AuthContext';
@@ -36,6 +37,10 @@ export default function PinDetailModal({
   const [isFollowing, setIsFollowing] = useState(false);
   const [loadingFollow, setLoadingFollow] = useState(false);
   const [copiedToast, setCopiedToast] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportReason, setReportReason] = useState('Contenido inapropiado');
+  const [submittingReport, setSubmittingReport] = useState(false);
+  const [reportSuccess, setReportSuccess] = useState(false);
 
   const isSaved = savedPinIds.includes(pin.id) || pin.saved;
   const isLiked = likedPinIds.includes(pin.id);
@@ -199,6 +204,20 @@ export default function PinDetailModal({
                     title="Copiar enlace directo"
                   >
                     <Share2 className="w-5 h-5" />
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      if (!user) {
+                        onOpenAuth('login');
+                        return;
+                      }
+                      setShowReportModal(true);
+                    }}
+                    className="p-2.5 rounded-full hover:bg-red-50 text-gray-500 hover:text-red-600 transition-colors"
+                    title="Reportar esta publicación al administrador"
+                  >
+                    <Flag className="w-5 h-5" />
                   </button>
 
                   <button
@@ -413,6 +432,105 @@ export default function PinDetailModal({
           </div>
         )}
       </div>
+
+      {/* Report Modal */}
+      {showReportModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl relative">
+            <button
+              onClick={() => {
+                setShowReportModal(false);
+                setReportSuccess(false);
+              }}
+              className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-700 rounded-full"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-2 mb-3 text-red-600">
+              <Flag className="w-5 h-5" />
+              <h3 className="font-bold text-base text-gray-900">Reportar Publicación</h3>
+            </div>
+
+            {reportSuccess ? (
+              <div className="py-4 text-center">
+                <p className="text-sm font-semibold text-emerald-600">
+                  ¡Gracias! Tu reporte ha sido enviado al equipo de administración para su revisión.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <p className="text-xs text-gray-600">
+                  ¿Por qué deseas reportar este pin? Tu reporte será revisado en el Panel de Administradores.
+                </p>
+
+                <div className="space-y-2">
+                  {[
+                    'Contenido inapropiado o explícito',
+                    'Spam o información engañosa',
+                    'Violación de derechos de autor',
+                    'Acoso o incitación al odio',
+                    'Otro motivo'
+                  ].map((reason) => (
+                    <label key={reason} className="flex items-center gap-2 text-xs text-gray-700 cursor-pointer p-2 rounded-xl hover:bg-gray-50 border border-gray-100">
+                      <input
+                        type="radio"
+                        name="reportReason"
+                        value={reason}
+                        checked={reportReason === reason}
+                        onChange={(e) => setReportReason(e.target.value)}
+                        className="text-[#E60023] focus:ring-[#E60023]"
+                      />
+                      <span>{reason}</span>
+                    </label>
+                  ))}
+                </div>
+
+                <div className="flex items-center gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowReportModal(false)}
+                    className="flex-1 py-2.5 text-xs font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-full"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    disabled={submittingReport}
+                    onClick={async () => {
+                      setSubmittingReport(true);
+                      try {
+                        const { supabase } = await import('../lib/supabaseClient');
+                        if (supabase && user) {
+                          await supabase.from('reports').insert({
+                            pin_id: pin.id,
+                            reporter_id: user.id,
+                            reporter_name: user.user_metadata?.full_name || 'Usuario',
+                            reason: reportReason,
+                            status: 'pending'
+                          });
+                        }
+                        setReportSuccess(true);
+                        setTimeout(() => {
+                          setShowReportModal(false);
+                          setReportSuccess(false);
+                        }, 2500);
+                      } catch (err) {
+                        console.error('Error submitting report:', err);
+                      } finally {
+                        setSubmittingReport(false);
+                      }
+                    }}
+                    className="flex-1 py-2.5 text-xs font-bold text-white bg-[#E60023] hover:bg-[#ad081b] rounded-full shadow-sm"
+                  >
+                    {submittingReport ? 'Enviando...' : 'Enviar Reporte'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

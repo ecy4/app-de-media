@@ -28,7 +28,7 @@ export default function AdminDashboard({
   onOpenPin 
 }) {
   const { user, updateProfile } = useAuth();
-  const [activeTab, setActiveTab] = useState('pins'); // 'pins' | 'users' | 'broadcast' | 'comments'
+  const [activeTab, setActiveTab] = useState('pins'); // 'pins' | 'hidden' | 'users' | 'reports' | 'comments' | 'broadcast'
   const [searchTerm, setSearchTerm] = useState('');
   const [usersList, setUsersList] = useState([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
@@ -37,6 +37,66 @@ export default function AdminDashboard({
   const [broadcastFeedback, setBroadcastFeedback] = useState(null);
   const [allComments, setAllComments] = useState([]);
   const [loadingComments, setLoadingComments] = useState(false);
+  const [reportsList, setReportsList] = useState([]);
+  const [loadingReports, setLoadingReports] = useState(false);
+
+  // Load user petitions / reports
+  const loadReports = async () => {
+    if (!supabase) return;
+    setLoadingReports(true);
+    try {
+      const { data, error } = await supabase
+        .from('reports')
+        .select('*, pins(id, title, media_url, is_hidden)')
+        .order('created_at', { ascending: false });
+
+      if (!error && data) {
+        setReportsList(data);
+      }
+    } catch (e) {
+      console.warn('Reports table might not exist yet:', e);
+    } finally {
+      setLoadingReports(false);
+    }
+  };
+
+  const handleResolveReport = async (reportId, action, pinId) => {
+    if (!supabase) return;
+    try {
+      if (action === 'hide' && pinId) {
+        await onToggleHidePin(pinId);
+      } else if (action === 'delete' && pinId) {
+        await onDeletePin(pinId);
+      }
+      
+      const { error } = await supabase
+        .from('reports')
+        .update({ status: 'resolved' })
+        .eq('id', reportId);
+
+      if (!error) {
+        setReportsList(prev => prev.map(r => r.id === reportId ? { ...r, status: 'resolved' } : r));
+      }
+    } catch (err) {
+      console.error('Error resolving report:', err);
+    }
+  };
+
+  const handleDismissReport = async (reportId) => {
+    if (!supabase) return;
+    try {
+      const { error } = await supabase
+        .from('reports')
+        .update({ status: 'dismissed' })
+        .eq('id', reportId);
+
+      if (!error) {
+        setReportsList(prev => prev.map(r => r.id === reportId ? { ...r, status: 'dismissed' } : r));
+      }
+    } catch (err) {
+      console.error('Error dismissing report:', err);
+    }
+  };
 
   // Fetch real registered profiles from Supabase
   const loadProfiles = async () => {
@@ -81,10 +141,13 @@ export default function AdminDashboard({
   useEffect(() => {
     loadProfiles();
     loadComments();
+    loadReports();
   }, []);
 
   const totalLikes = pins.reduce((acc, p) => acc + (p.likes || 0), 0);
   const totalComments = allComments.length || pins.reduce((acc, p) => acc + (p.comments?.length || 0), 0);
+  const hiddenPinsCount = pins.filter(p => p.isHidden).length;
+  const pendingReportsCount = reportsList.filter(r => r.status === 'pending').length;
 
   // Send global notification announcement to all users
   const handleSendBroadcast = async (e) => {
@@ -276,16 +339,43 @@ export default function AdminDashboard({
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-3 border-b border-gray-100 pb-3 mb-6">
+      <div className="flex items-center gap-3 border-b border-gray-100 pb-3 mb-6 overflow-x-auto no-scrollbar">
         <button
           onClick={() => setActiveTab('pins')}
-          className={`px-4 py-2 rounded-full text-xs font-bold transition-all ${
+          className={`px-4 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap ${
             activeTab === 'pins'
               ? 'bg-black text-white'
               : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
           }`}
         >
-          Moderación de Pines ({pins.length})
+          Todos los Pines ({pins.length})
+        </button>
+
+        <button
+          onClick={() => setActiveTab('hidden')}
+          className={`px-4 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 ${
+            activeTab === 'hidden'
+              ? 'bg-red-600 text-white'
+              : 'bg-red-50 text-red-700 hover:bg-red-100'
+          }`}
+        >
+          <EyeOff className="w-3.5 h-3.5" />
+          <span>Ocultos / Baneados ({hiddenPinsCount})</span>
+        </button>
+
+        <button
+          onClick={() => {
+            setActiveTab('reports');
+            loadReports();
+          }}
+          className={`px-4 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 ${
+            activeTab === 'reports'
+              ? 'bg-amber-600 text-white'
+              : 'bg-amber-50 text-amber-700 hover:bg-amber-100'
+          }`}
+        >
+          <AlertTriangle className="w-3.5 h-3.5" />
+          <span>Peticiones / Reportes {pendingReportsCount > 0 && `(${pendingReportsCount})`}</span>
         </button>
 
         <button
@@ -293,13 +383,13 @@ export default function AdminDashboard({
             setActiveTab('users');
             loadProfiles();
           }}
-          className={`px-4 py-2 rounded-full text-xs font-bold transition-all ${
+          className={`px-4 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap ${
             activeTab === 'users'
               ? 'bg-black text-white'
               : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
           }`}
         >
-          Gestión de Usuarios ({usersList.length})
+          Usuarios ({usersList.length})
         </button>
 
         <button
@@ -307,24 +397,24 @@ export default function AdminDashboard({
             setActiveTab('comments');
             loadComments();
           }}
-          className={`px-4 py-2 rounded-full text-xs font-bold transition-all ${
+          className={`px-4 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap ${
             activeTab === 'comments'
               ? 'bg-black text-white'
               : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
           }`}
         >
-          Moderación de Comentarios ({allComments.length})
+          Comentarios ({allComments.length})
         </button>
 
         <button
           onClick={() => setActiveTab('broadcast')}
-          className={`px-4 py-2 rounded-full text-xs font-bold transition-all ${
+          className={`px-4 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap ${
             activeTab === 'broadcast'
               ? 'bg-black text-white'
               : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
           }`}
         >
-          📢 Enviar Anuncio Global
+          📢 Anuncio Global
         </button>
       </div>
 
@@ -433,7 +523,217 @@ export default function AdminDashboard({
         </div>
       )}
 
-      {/* Tab 2: Gestión de Usuarios Reales de Supabase */}
+      {/* Tab: Pines Ocultos / Baneados */}
+      {activeTab === 'hidden' && (
+        <div className="bg-white border border-gray-100 rounded-3xl shadow-sm overflow-hidden">
+          <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+            <div>
+              <h3 className="font-bold text-sm text-gray-900 flex items-center gap-2">
+                <EyeOff className="w-4 h-4 text-red-500" />
+                <span>Pines Ocultos o Baneados del Feed</span>
+              </h3>
+              <p className="text-[11px] text-gray-500">
+                Estas publicaciones no son visibles para el público general, pero permanecen archivadas en Supabase.
+              </p>
+            </div>
+            <span className="text-xs bg-red-50 text-red-700 font-bold px-3 py-1 rounded-full">
+              {pins.filter(p => p.isHidden).length} ocultos
+            </span>
+          </div>
+
+          <div className="overflow-x-auto">
+            {pins.filter(p => p.isHidden).length === 0 ? (
+              <div className="py-14 text-center text-xs text-gray-400">
+                <Eye className="w-8 h-8 mx-auto mb-2 opacity-30 text-emerald-500" />
+                No hay ningún pin oculto o baneado en este momento.
+              </div>
+            ) : (
+              <table className="w-full text-left text-xs">
+                <thead className="bg-gray-50 text-gray-500 uppercase font-bold text-[10px]">
+                  <tr>
+                    <th className="p-4">Medio</th>
+                    <th className="p-4">Título</th>
+                    <th className="p-4">Autor</th>
+                    <th className="p-4">Categoría</th>
+                    <th className="p-4 text-right">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {pins.filter(p => p.isHidden).map((pin) => (
+                    <tr key={pin.id} className="hover:bg-gray-50/80 transition-colors">
+                      <td className="p-4">
+                        <div 
+                          onClick={() => onOpenPin(pin)}
+                          className="w-12 h-14 rounded-lg overflow-hidden bg-black cursor-pointer relative"
+                        >
+                          {pin.type === 'video' ? (
+                            <video src={pin.mediaUrl} className="w-full h-full object-cover" />
+                          ) : (
+                            <img src={pin.mediaUrl} alt="" className="w-full h-full object-cover" />
+                          )}
+                        </div>
+                      </td>
+                      <td className="p-4 font-bold text-gray-900 max-w-[200px] truncate">
+                        {pin.title}
+                      </td>
+                      <td className="p-4 text-gray-600">
+                        <div className="flex items-center gap-1.5">
+                          <img
+                            src={pin.author?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=80&q=80'}
+                            alt=""
+                            className="w-5 h-5 rounded-full object-cover"
+                          />
+                          <span>{pin.author?.name || 'Creador'}</span>
+                        </div>
+                      </td>
+                      <td className="p-4">
+                        <span className="bg-gray-100 px-2 py-0.5 rounded-full text-[10px] font-semibold text-gray-700">
+                          {pin.category}
+                        </span>
+                      </td>
+                      <td className="p-4 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => onToggleHidePin(pin.id)}
+                            className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-full font-bold text-[11px] flex items-center gap-1 transition-colors"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                            <span>Desbanear / Restaurar</span>
+                          </button>
+                          <button
+                            onClick={() => onDeletePin(pin.id)}
+                            className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Eliminar permanentemente de Supabase"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Tab: Peticiones y Reportes de Usuarios */}
+      {activeTab === 'reports' && (
+        <div className="bg-white border border-gray-100 rounded-3xl shadow-sm overflow-hidden">
+          <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+            <div>
+              <h3 className="font-bold text-sm text-gray-900 flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-amber-500" />
+                <span>Peticiones de Moderación y Reportes</span>
+              </h3>
+              <p className="text-[11px] text-gray-500">
+                Peticiones enviadas por usuarios reportando contenido inapropiado o solicitudes de revisión.
+              </p>
+            </div>
+            <button
+              onClick={loadReports}
+              className="text-xs font-bold text-[#E60023] hover:underline"
+            >
+              Actualizar peticiones
+            </button>
+          </div>
+
+          <div className="overflow-x-auto">
+            {loadingReports ? (
+              <div className="py-12 flex items-center justify-center gap-2 text-xs text-gray-500">
+                <Loader2 className="w-4 h-4 animate-spin text-[#E60023]" />
+                <span>Cargando peticiones de moderación...</span>
+              </div>
+            ) : reportsList.length === 0 ? (
+              <div className="py-14 text-center text-xs text-gray-400">
+                <ShieldCheck className="w-8 h-8 mx-auto mb-2 opacity-30 text-emerald-500" />
+                No hay peticiones ni reportes pendientes. ¡Todo en orden!
+              </div>
+            ) : (
+              <table className="w-full text-left text-xs">
+                <thead className="bg-gray-50 text-gray-500 uppercase font-bold text-[10px]">
+                  <tr>
+                    <th className="p-4">Reportado Por</th>
+                    <th className="p-4">Motivo / Razón</th>
+                    <th className="p-4">Pin Afectado</th>
+                    <th className="p-4">Estado</th>
+                    <th className="p-4">Fecha</th>
+                    <th className="p-4 text-right">Resolución</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {reportsList.map((rep) => (
+                    <tr key={rep.id} className="hover:bg-gray-50/80 transition-colors">
+                      <td className="p-4 font-semibold text-gray-900">
+                        {rep.reporter_name || 'Usuario'}
+                      </td>
+                      <td className="p-4 text-gray-800 max-w-xs font-medium">
+                        {rep.reason || rep.message || 'Contenido inadecuado'}
+                      </td>
+                      <td className="p-4">
+                        {rep.pins ? (
+                          <div className="flex items-center gap-2">
+                            {rep.pins.media_url && (
+                              <img src={rep.pins.media_url} alt="" className="w-8 h-8 rounded object-cover" />
+                            )}
+                            <span className="font-semibold truncate max-w-[120px]">{rep.pins.title || 'Pin'}</span>
+                          </div>
+                        ) : (
+                          <span className="text-gray-400 font-mono text-[10px]">{rep.pin_id ? rep.pin_id.slice(0, 8) : 'General'}</span>
+                        )}
+                      </td>
+                      <td className="p-4">
+                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                          rep.status === 'resolved' 
+                            ? 'bg-emerald-50 text-emerald-700'
+                            : rep.status === 'dismissed'
+                            ? 'bg-gray-100 text-gray-500'
+                            : 'bg-amber-50 text-amber-700 animate-pulse'
+                        }`}>
+                          {rep.status === 'resolved' ? 'Resuelto' : rep.status === 'dismissed' ? 'Descartado' : 'Pendiente'}
+                        </span>
+                      </td>
+                      <td className="p-4 text-gray-400 text-[10px]">
+                        {new Date(rep.created_at).toLocaleDateString()}
+                      </td>
+                      <td className="p-4 text-right">
+                        {rep.status === 'pending' ? (
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              onClick={() => handleResolveReport(rep.id, 'hide', rep.pin_id)}
+                              className="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-full font-bold text-[10px] transition-colors"
+                              title="Ocultar pin y marcar resuelto"
+                            >
+                              Ocultar Pin
+                            </button>
+                            <button
+                              onClick={() => handleResolveReport(rep.id, 'delete', rep.pin_id)}
+                              className="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white rounded-full font-bold text-[10px] transition-colors"
+                              title="Borrar pin y marcar resuelto"
+                            >
+                              Borrar Pin
+                            </button>
+                            <button
+                              onClick={() => handleDismissReport(rep.id)}
+                              className="px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-full font-bold text-[10px] transition-colors"
+                              title="Descartar reporte"
+                            >
+                              Ignorar
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="text-[10px] text-gray-400 font-semibold">Cerrado</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
+      )}
       {activeTab === 'users' && (
         <div className="bg-white border border-gray-100 rounded-3xl shadow-sm overflow-hidden">
           <div className="p-4 border-b border-gray-100 flex items-center justify-between">

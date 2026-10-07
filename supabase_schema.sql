@@ -293,3 +293,29 @@ CREATE POLICY "Actualización y borrado de archivos propios o admin"
     auth.uid()::text = (storage.foldername(name))[1] OR 
     EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
   );
+
+-- 10. TABLA DE REPORTES Y PETICIONES DE MODERACIÓN
+CREATE TABLE IF NOT EXISTS public.reports (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  pin_id UUID REFERENCES public.pins(id) ON DELETE CASCADE,
+  reporter_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+  reporter_name TEXT NOT NULL,
+  reason TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'resolved', 'dismissed')),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+ALTER TABLE public.reports ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Lectura de reportes solo admins"
+  ON public.reports FOR SELECT
+  USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin'));
+
+CREATE POLICY "Creación de reportes autenticados"
+  ON public.reports FOR INSERT
+  WITH CHECK (auth.role() = 'authenticated');
+
+CREATE POLICY "Actualización de reportes solo admins"
+  ON public.reports FOR UPDATE
+  USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin'));
+
