@@ -10,7 +10,10 @@ import {
   UserPlus, 
   ArrowLeft,
   Edit3,
-  Loader2
+  Loader2,
+  Folder,
+  FolderPlus,
+  LayoutGrid
 } from 'lucide-react';
 import MasonryGrid from './MasonryGrid';
 import { useAuth } from '../context/AuthContext';
@@ -18,11 +21,13 @@ import EditProfileModal from './EditProfileModal';
 import { 
   fetchCreatorFollowStats, 
   checkIsFollowingUser, 
-  toggleFollowUser 
+  toggleFollowUser,
+  fetchUserBoards,
+  createBoardInDb
 } from '../lib/supabaseClient';
 
 export default function UserProfile({ 
-  viewedCreator = null, // If null, viewing logged-in user; if object, viewing that creator
+  viewedCreator = null,
   pins, 
   savedPinIds, 
   onPinClick, 
@@ -36,25 +41,30 @@ export default function UserProfile({
   onOpenAuth 
 }) {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState('created'); // 'created' | 'saved'
+  const [activeTab, setActiveTab] = useState('created'); // 'created' | 'saved' | 'boards'
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [followStats, setFollowStats] = useState({ followersCount: 0, followingCount: 0 });
   const [isFollowing, setIsFollowing] = useState(false);
   const [loadingFollow, setLoadingFollow] = useState(false);
 
-  // Determine target user ID
+  // Boards state
+  const [boards, setBoards] = useState([]);
+  const [selectedBoardId, setSelectedBoardId] = useState(null);
+  const [showCreateBoardModal, setShowCreateBoardModal] = useState(false);
+  const [newBoardTitle, setNewBoardTitle] = useState('');
+  const [creatingBoard, setCreatingBoard] = useState(false);
+
   const isSelf = !viewedCreator || viewedCreator.id === user?.id || viewedCreator.handle === `@${user?.user_metadata?.username}`;
   
   const [profileData, setProfileData] = useState(null);
   const [resolvedTargetId, setResolvedTargetId] = useState(isSelf ? user?.id : null);
 
-  // Display variables (prioritizing loaded profileData from database)
   const displayName = isSelf
-    ? (user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Usuario')
+    ? (user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Artista')
     : (profileData?.full_name || viewedCreator?.name || 'Creador');
 
   const displayHandle = isSelf
-    ? (user?.user_metadata?.username || user?.email?.split('@')[0] || 'usuario')
+    ? (user?.user_metadata?.username || user?.email?.split('@')[0] || 'artista')
     : (profileData?.username || viewedCreator?.handle?.replace(/^@/, '') || 'creador');
 
   const displayAvatar = isSelf
@@ -62,11 +72,23 @@ export default function UserProfile({
     : (profileData?.avatar_url || viewedCreator?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${displayHandle}`);
 
   const displayBio = isSelf
-    ? (user?.user_metadata?.bio || 'Creador visual y coleccionista de ideas ✨')
-    : (profileData?.bio || viewedCreator?.bio || 'Compartiendo fotografía, diseño y proyectos creativos en PinMedia.');
+    ? (user?.user_metadata?.bio || 'Estudio de ilustración y referencias anatómicas 🎨')
+    : (profileData?.bio || viewedCreator?.bio || 'Referencias visuales y proyectos creativos.');
 
   const displayWebsite = isSelf ? user?.user_metadata?.website : (profileData?.website || viewedCreator?.website);
   const displayRole = isSelf ? (user?.user_metadata?.role || 'user') : (profileData?.role || viewedCreator?.role || 'user');
+
+  // Load Boards
+  useEffect(() => {
+    async function loadBoards() {
+      const targetId = isSelf ? user?.id : resolvedTargetId;
+      if (targetId) {
+        const loaded = await fetchUserBoards(targetId);
+        setBoards(loaded || []);
+      }
+    }
+    loadBoards();
+  }, [isSelf, user?.id, resolvedTargetId]);
 
   // Load Real Profile & Follow Stats from Supabase
   useEffect(() => {
@@ -93,28 +115,28 @@ export default function UserProfile({
           query = query.eq('username', lookupHandle);
         }
 
-        const { data: dbProfile, error } = await query.maybeSingle();
+        const { data: dbProfile } = await query.maybeSingle();
 
         if (dbProfile) {
           setProfileData(dbProfile);
           finalId = dbProfile.id;
         }
-      } catch (err) {
-        console.error('Error fetching creator profile:', err);
-      }
 
-      setResolvedTargetId(finalId);
+        if (finalId) {
+          setResolvedTargetId(finalId);
+          const stats = await fetchCreatorFollowStats(finalId);
+          setFollowStats(stats);
 
-      if (finalId) {
-        const stats = await fetchCreatorFollowStats(finalId);
-        setFollowStats(stats);
-
-        if (user?.id) {
-          const following = await checkIsFollowingUser(user.id, finalId);
-          setIsFollowing(following);
+          if (user?.id) {
+            const isFol = await checkIsFollowingUser(user.id, finalId);
+            setIsFollowing(isFol);
+          }
         }
+      } catch (e) {
+        console.error('Error loading creator profile:', e);
       }
     }
+
     loadCreatorProfileAndFollows();
   }, [viewedCreator, isSelf, user?.id]);
 
@@ -123,7 +145,7 @@ export default function UserProfile({
       onOpenAuth?.('login');
       return;
     }
-    if (!resolvedTargetId || isSelf) return;
+    if (!resolvedTargetId || loadingFollow) return;
 
     setLoadingFollow(true);
     try {
@@ -131,124 +153,128 @@ export default function UserProfile({
       setIsFollowing(nowFollowing);
       setFollowStats(prev => ({
         ...prev,
-        followersCount: Math.max(0, prev.followersCount + (nowFollowing ? 1 : -1))
+        followersCount: nowFollowing ? prev.followersCount + 1 : Math.max(0, prev.followersCount - 1)
       }));
-      onShowToast?.(nowFollowing ? `Ahora sigues a @${displayHandle}` : `Dejaste de seguir a @${displayHandle}`);
+      onShowToast?.(nowFollowing ? '¡Ahora sigues a este artista!' : 'Has dejado de seguir a este artista');
     } catch (err) {
-      console.error('Follow error:', err);
-      onShowToast?.('Error al actualizar el seguimiento en la base de datos', true);
+      console.error(err);
+      onShowToast?.(err.message || 'Error al actualizar seguimiento', true);
     } finally {
       setLoadingFollow(false);
     }
   };
 
-  // Filter created pins (Banned/hidden pins are hidden for everyone except the author or admin)
-  const isUserAdmin = user?.role === 'admin' || user?.user_metadata?.role === 'admin';
-  const createdPins = pins.filter((p) => {
-    // If hidden, only show to author or admin
-    if (p.isHidden && !isSelf && !isUserAdmin) {
-      return false;
+  const handleCreateNewBoard = async (e) => {
+    e.preventDefault();
+    if (!newBoardTitle.trim() || !user?.id) return;
+    setCreatingBoard(true);
+    try {
+      const created = await createBoardInDb(user.id, newBoardTitle.trim());
+      if (created) {
+        setBoards(prev => [created, ...prev]);
+        setNewBoardTitle('');
+        setShowCreateBoardModal(false);
+        onShowToast?.(`Tablero "${created.title}" creado con éxito.`);
+      }
+    } catch (err) {
+      onShowToast?.(err.message || 'Error al crear tablero', true);
+    } finally {
+      setCreatingBoard(false);
     }
+  };
 
+  const createdPins = pins.filter((p) => {
     if (isSelf) {
-      return p.author?.id === user?.id || p.user_id === user?.id || p.author?.handle === `@${displayHandle}`;
-    } else {
-      return p.author?.id === resolvedTargetId || p.user_id === resolvedTargetId || p.author?.handle === `@${displayHandle}`;
+      return (p.user_id && p.user_id === user?.id) || (!p.isExternal && p.author?.id === user?.id);
     }
+    return (p.user_id && p.user_id === resolvedTargetId) || 
+           (p.author?.id === resolvedTargetId) || 
+           (p.author?.handle === `@${displayHandle}`);
   });
 
-  // Filter saved pins (Only available for own authenticated profile)
-  const savedPins = isSelf ? pins.filter((p) => savedPinIds.includes(p.id) || p.saved) : [];
+  const savedPins = pins.filter((p) => savedPinIds.includes(p.id) || p.saved);
 
   return (
-    <div className="max-w-[1920px] mx-auto px-4 sm:px-6 py-6 animate-fadeIn">
-      {/* Back button for third party profile */}
-      {!isSelf && onBackToFeed && (
+    <div className="max-w-[1920px] mx-auto px-3 sm:px-6 py-4 animate-fadeIn text-neutral-100">
+      {/* Back Button */}
+      <div className="mb-4">
         <button
           onClick={onBackToFeed}
-          className="mb-6 inline-flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-full text-xs font-bold transition-all"
+          className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-neutral-900 border border-neutral-800 hover:bg-neutral-800 text-xs font-bold text-neutral-300 transition-colors shadow-sm"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>Volver al Feed</span>
+          <span>Volver al estudio</span>
         </button>
-      )}
+      </div>
 
-      {/* Profile Container */}
-      <div className="relative mb-10 max-w-4xl mx-auto">
-        {/* Cover Banner */}
-        <div className="h-44 sm:h-56 w-full rounded-3xl bg-gradient-to-r from-red-600 via-rose-500 to-amber-500 shadow-md relative overflow-hidden">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-white/20 via-transparent to-black/20" />
-          <div className="absolute -right-8 -bottom-8 w-48 h-48 bg-white/10 rounded-full blur-2xl pointer-events-none" />
+      {/* Profile Header Card */}
+      <div className="mb-8 rounded-3xl overflow-hidden bg-neutral-900 border border-neutral-800 shadow-xl relative">
+        <div className="h-36 sm:h-52 w-full bg-gradient-to-r from-red-950 via-neutral-900 to-neutral-950 relative overflow-hidden">
+          <div className="absolute inset-0 opacity-20 bg-[radial-gradient(#e60023_1px,transparent_1px)] [background-size:16px_16px]" />
         </div>
 
-        {/* Profile Card Header */}
-        <div className="relative px-6 pb-6 pt-0 -mt-20 sm:-mt-24 flex flex-col items-center text-center">
-          {/* Avatar with ring & glow */}
-          <div className="relative group mb-4">
-            <div className="p-1 bg-white rounded-full shadow-xl ring-4 ring-white/60">
+        <div className="px-6 pb-8 pt-0 flex flex-col items-center text-center relative -mt-16 sm:-mt-20">
+          <div className="relative mb-3 group">
+            <div className="w-28 h-28 sm:w-36 sm:h-36 rounded-full p-1 bg-neutral-900 shadow-xl ring-4 ring-neutral-800">
               <img
                 src={displayAvatar}
                 alt={displayName}
-                className="w-28 h-28 sm:w-36 sm:h-36 rounded-full object-cover shadow-inner transition-transform duration-300 group-hover:scale-105"
+                className="w-full h-full rounded-full object-cover shadow-inner"
               />
             </div>
             {displayRole === 'admin' && (
-              <span className="absolute bottom-1 right-1 bg-gradient-to-r from-red-600 to-rose-600 text-white text-[10px] font-black tracking-wider uppercase px-2.5 py-0.5 rounded-full shadow-lg ring-2 ring-white">
+              <span className="absolute bottom-1 right-1 bg-red-600 text-white text-[10px] font-black uppercase px-2 py-0.5 rounded-full shadow-lg ring-2 ring-neutral-900">
                 Admin
               </span>
             )}
           </div>
 
-          {/* User Info */}
-          <h1 className="text-2xl sm:text-4xl font-black text-gray-900 tracking-tight">
+          <h1 className="text-2xl sm:text-4xl font-black text-white tracking-tight">
             {displayName}
           </h1>
-          <p className="text-sm font-bold text-gray-400 mt-1">
+          <p className="text-sm font-bold text-neutral-400 mt-1">
             @{displayHandle}
           </p>
-
-          {/* Bio */}
-          <p className="text-xs sm:text-sm text-gray-600 mt-3 max-w-md leading-relaxed font-normal">
+          <p className="text-xs sm:text-sm text-neutral-300 mt-3 max-w-md leading-relaxed font-normal">
             {displayBio}
           </p>
 
-          {/* Website link */}
           {displayWebsite && (
             <a
               href={displayWebsite.startsWith('http') ? displayWebsite : `https://${displayWebsite}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-3 text-xs font-bold text-[#E60023] hover:underline flex items-center gap-1.5 bg-red-50 hover:bg-red-100/80 px-3 py-1 rounded-full transition-colors"
+              className="mt-3 text-xs font-bold text-red-400 hover:underline flex items-center gap-1.5 bg-neutral-800 px-3 py-1 rounded-full"
             >
               <Globe className="w-3.5 h-3.5" />
               <span>{displayWebsite.replace(/^https?:\/\//, '')}</span>
             </a>
           )}
 
-          {/* Modern Floating Stats Bar */}
-          <div className="flex items-center gap-2 sm:gap-6 mt-5 p-2 px-4 sm:px-6 bg-white/80 backdrop-blur-xl border border-gray-100 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.06)] rounded-2xl text-xs sm:text-sm font-semibold text-gray-600">
+          {/* Stats Bar */}
+          <div className="flex items-center gap-2 sm:gap-6 mt-5 p-2 px-4 sm:px-6 bg-neutral-950/80 border border-neutral-800 rounded-2xl text-xs sm:text-sm font-semibold text-neutral-400">
             <div className="px-3 py-1 text-center">
-              <strong className="block text-base sm:text-lg font-black text-gray-900">{createdPins.length}</strong>
-              <span className="text-[11px] text-gray-400 font-medium">Publicaciones</span>
+              <strong className="block text-base sm:text-lg font-black text-white">{createdPins.length}</strong>
+              <span className="text-[11px] text-neutral-500">Láminas</span>
             </div>
             {isSelf && (
               <>
-                <div className="w-[1px] h-7 bg-gray-100" />
+                <div className="w-[1px] h-7 bg-neutral-800" />
                 <div className="px-3 py-1 text-center">
-                  <strong className="block text-base sm:text-lg font-black text-gray-900">{savedPins.length}</strong>
-                  <span className="text-[11px] text-gray-400 font-medium">Guardados</span>
+                  <strong className="block text-base sm:text-lg font-black text-white">{savedPins.length}</strong>
+                  <span className="text-[11px] text-neutral-500">Guardados</span>
+                </div>
+                <div className="w-[1px] h-7 bg-neutral-800" />
+                <div className="px-3 py-1 text-center">
+                  <strong className="block text-base sm:text-lg font-black text-white">{boards.length}</strong>
+                  <span className="text-[11px] text-neutral-500">Moodboards</span>
                 </div>
               </>
             )}
-            <div className="w-[1px] h-7 bg-gray-100" />
+            <div className="w-[1px] h-7 bg-neutral-800" />
             <div className="px-3 py-1 text-center">
-              <strong className="block text-base sm:text-lg font-black text-gray-900">{followStats.followersCount}</strong>
-              <span className="text-[11px] text-gray-400 font-medium">Seguidores</span>
-            </div>
-            <div className="w-[1px] h-7 bg-gray-100" />
-            <div className="px-3 py-1 text-center">
-              <strong className="block text-base sm:text-lg font-black text-gray-900">{followStats.followingCount}</strong>
-              <span className="text-[11px] text-gray-400 font-medium">Siguiendo</span>
+              <strong className="block text-base sm:text-lg font-black text-white">{followStats.followersCount}</strong>
+              <span className="text-[11px] text-neutral-500">Seguidores</span>
             </div>
           </div>
 
@@ -258,53 +284,53 @@ export default function UserProfile({
               <>
                 <button
                   onClick={() => setIsEditModalOpen(true)}
-                  className="px-5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-full text-xs font-bold flex items-center gap-2 transition-all active:scale-95 shadow-sm"
+                  className="px-5 py-2.5 bg-neutral-800 hover:bg-neutral-700 text-white rounded-full text-xs font-bold flex items-center gap-2"
                 >
                   <Edit3 className="w-3.5 h-3.5" />
                   <span>Editar perfil</span>
                 </button>
                 <button
                   onClick={onOpenCreatePin}
-                  className="px-5 py-2.5 bg-[#E60023] hover:bg-[#ad081b] text-white rounded-full text-xs font-bold flex items-center gap-2 shadow-md shadow-red-600/20 transition-all active:scale-95"
+                  className="px-5 py-2.5 bg-[#E60023] hover:bg-[#ad081b] text-white rounded-full text-xs font-bold flex items-center gap-2 shadow-md shadow-red-600/20"
                 >
                   <Plus className="w-3.5 h-3.5" />
-                  <span>Crear Pin</span>
+                  <span>Subir Lámina</span>
                 </button>
               </>
             ) : (
-            <button
-              onClick={handleFollowToggle}
-              disabled={loadingFollow}
-              className={`px-5 py-2.5 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm ${
-                isFollowing
-                  ? 'bg-gray-200 text-gray-800 hover:bg-gray-300'
-                  : 'bg-[#E60023] hover:bg-[#ad081b] text-white'
-              }`}
-            >
-              {loadingFollow ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              ) : isFollowing ? (
-                <>
-                  <UserCheck className="w-4 h-4" />
-                  <span>Siguiendo</span>
-                </>
-              ) : (
-                <>
-                  <UserPlus className="w-4 h-4" />
-                  <span>Seguir creador</span>
-                </>
-              )}
-            </button>
-          )}
+              <button
+                onClick={handleFollowToggle}
+                disabled={loadingFollow}
+                className={`px-5 py-2.5 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 ${
+                  isFollowing
+                    ? 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700'
+                    : 'bg-[#E60023] hover:bg-[#ad081b] text-white'
+                }`}
+              >
+                {loadingFollow ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : isFollowing ? (
+                  <>
+                    <UserCheck className="w-4 h-4" />
+                    <span>Siguiendo</span>
+                  </>
+                ) : (
+                  <>
+                    <UserPlus className="w-4 h-4" />
+                    <span>Seguir artista</span>
+                  </>
+                )}
+              </button>
+            )}
 
             <button
               onClick={() => {
                 if (navigator.clipboard) {
                   navigator.clipboard.writeText(window.location.href);
-                  onShowToast?.('¡Enlace de perfil copiado al portapapeles!');
+                  onShowToast?.('¡Enlace de artista copiado al portapapeles!');
                 }
               }}
-              className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-full text-xs font-bold flex items-center gap-1.5 transition-colors"
+              className="px-4 py-2 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 rounded-full text-xs font-bold flex items-center gap-1.5"
             >
               <Share2 className="w-3.5 h-3.5" />
               <span>Compartir</span>
@@ -314,43 +340,111 @@ export default function UserProfile({
       </div>
 
       {/* Tabs */}
-      {isSelf ? (
-        <div className="flex items-center justify-center gap-6 border-b border-gray-200 mb-6">
-          <button
-            onClick={() => setActiveTab('created')}
-            className={`pb-3 font-bold text-sm sm:text-base transition-all relative ${
-              activeTab === 'created' ? 'text-gray-900' : 'text-gray-400 hover:text-gray-700'
-            }`}
-          >
-            <span>Creados ({createdPins.length})</span>
-            {activeTab === 'created' && (
-              <div className="absolute bottom-0 left-0 right-0 h-1 bg-black rounded-full" />
-            )}
-          </button>
+      <div className="flex items-center justify-center gap-4 sm:gap-8 border-b border-neutral-800 mb-6">
+        <button
+          onClick={() => { setActiveTab('created'); setSelectedBoardId(null); }}
+          className={`pb-3 font-bold text-xs sm:text-sm transition-all relative ${
+            activeTab === 'created' ? 'text-white' : 'text-neutral-500 hover:text-neutral-300'
+          }`}
+        >
+          <span>Láminas Propias ({createdPins.length})</span>
+          {activeTab === 'created' && (
+            <div className="absolute bottom-0 left-0 right-0 h-1 bg-[#E60023] rounded-full" />
+          )}
+        </button>
 
-          <button
-            onClick={() => setActiveTab('saved')}
-            className={`pb-3 font-bold text-sm sm:text-base transition-all relative ${
-              activeTab === 'saved' ? 'text-gray-900' : 'text-gray-400 hover:text-gray-700'
-            }`}
-          >
-            <span>Guardados ({savedPins.length})</span>
-            {activeTab === 'saved' && (
-              <div className="absolute bottom-0 left-0 right-0 h-1 bg-black rounded-full" />
-            )}
-          </button>
-        </div>
-      ) : (
-        <div className="border-b border-gray-200 mb-6 text-center">
-          <h2 className="font-bold text-base text-gray-900 pb-3 border-b-2 border-black inline-block">
-            Pines de @{displayHandle} ({createdPins.length})
-          </h2>
-        </div>
-      )}
+        {isSelf && (
+          <>
+            <button
+              onClick={() => { setActiveTab('saved'); setSelectedBoardId(null); }}
+              className={`pb-3 font-bold text-xs sm:text-sm transition-all relative ${
+                activeTab === 'saved' ? 'text-white' : 'text-neutral-500 hover:text-neutral-300'
+              }`}
+            >
+              <span>Guardados ({savedPins.length})</span>
+              {activeTab === 'saved' && (
+                <div className="absolute bottom-0 left-0 right-0 h-1 bg-[#E60023] rounded-full" />
+              )}
+            </button>
 
-      {/* Tab Content / Grid */}
+            <button
+              onClick={() => { setActiveTab('boards'); }}
+              className={`pb-3 font-bold text-xs sm:text-sm transition-all relative flex items-center gap-1.5 ${
+                activeTab === 'boards' ? 'text-white' : 'text-neutral-500 hover:text-neutral-300'
+              }`}
+            >
+              <Folder className="w-4 h-4 text-amber-400" />
+              <span>Tableros ({boards.length})</span>
+              {activeTab === 'boards' && (
+                <div className="absolute bottom-0 left-0 right-0 h-1 bg-[#E60023] rounded-full" />
+              )}
+            </button>
+          </>
+        )}
+      </div>
+
+      {/* Tab Content */}
       <div>
-        {isSelf && activeTab === 'saved' ? (
+        {activeTab === 'boards' && isSelf ? (
+          <div>
+            {/* Create Board Button */}
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-base font-bold text-white flex items-center gap-2">
+                <Folder className="w-5 h-5 text-amber-400" />
+                <span>Moodboards de Referencia</span>
+              </h2>
+              <button
+                onClick={() => setShowCreateBoardModal(true)}
+                className="px-4 py-2 bg-[#E60023] hover:bg-[#ad081b] text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md shadow-red-600/20"
+              >
+                <FolderPlus className="w-4 h-4" />
+                <span>Nuevo Tablero</span>
+              </button>
+            </div>
+
+            {/* Boards Grid */}
+            {boards.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {boards.map(b => (
+                  <div
+                    key={b.id}
+                    onClick={() => {
+                      setSelectedBoardId(b.id);
+                      setActiveTab('saved');
+                    }}
+                    className="p-5 rounded-3xl bg-neutral-900 border border-neutral-800 hover:border-neutral-700 cursor-pointer transition-all hover:-translate-y-1 group"
+                  >
+                    <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-400 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                      <Folder className="w-6 h-6" />
+                    </div>
+                    <h3 className="font-bold text-sm text-white group-hover:text-red-400 transition-colors">
+                      {b.title}
+                    </h3>
+                    <p className="text-xs text-neutral-500 mt-1">
+                      {b.description || 'Colección de estudio visual'}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="py-16 text-center max-w-sm mx-auto">
+                <div className="w-16 h-16 rounded-full bg-neutral-900 border border-neutral-800 flex items-center justify-center mx-auto text-amber-400 mb-3">
+                  <FolderPlus className="w-8 h-8" />
+                </div>
+                <h3 className="font-bold text-base text-white">Sin tableros aún</h3>
+                <p className="text-xs text-neutral-400 mt-1 mb-4">
+                  Crea moodboards como "Práctica de Manos", "Fantasía Oscura" o "Estudio de Iluminación" para organizar tus referencias.
+                </p>
+                <button
+                  onClick={() => setShowCreateBoardModal(true)}
+                  className="px-5 py-2.5 bg-[#E60023] hover:bg-[#ad081b] text-white rounded-full font-bold text-xs"
+                >
+                  Crear mi primer tablero
+                </button>
+              </div>
+            )}
+          </div>
+        ) : activeTab === 'saved' && isSelf ? (
           savedPins.length > 0 ? (
             <MasonryGrid
               pins={savedPins}
@@ -363,20 +457,20 @@ export default function UserProfile({
             />
           ) : (
             <div className="py-16 text-center max-w-sm mx-auto">
-              <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto text-gray-400 mb-3">
+              <div className="w-16 h-16 rounded-full bg-neutral-900 border border-neutral-800 flex items-center justify-center mx-auto text-neutral-500 mb-3">
                 <Bookmark className="w-8 h-8" />
               </div>
-              <h3 className="font-bold text-base text-gray-800">
-                Aún no tienes Pines guardados
+              <h3 className="font-bold text-base text-white">
+                Aún no tienes referencias guardadas
               </h3>
-              <p className="text-xs text-gray-500 mt-1 mb-4">
-                Explora el feed y presiona el botón rojo "Guardar" para coleccionar tus ideas favoritas.
+              <p className="text-xs text-neutral-400 mt-1 mb-4">
+                Explora el estudio y presiona "Guardar" para coleccionar referencias en tus tableros.
               </p>
               <button
                 onClick={onExploreClick}
-                className="px-5 py-2.5 bg-black hover:bg-neutral-800 text-white rounded-full font-bold text-xs shadow-md transition-all active:scale-95"
+                className="px-5 py-2.5 bg-[#E60023] text-white rounded-full font-bold text-xs shadow-md"
               >
-                Explorar ideas
+                Explorar referencias
               </button>
             </div>
           )
@@ -393,28 +487,66 @@ export default function UserProfile({
           />
         ) : (
           <div className="py-16 text-center max-w-sm mx-auto">
-            <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto text-gray-400 mb-3">
+            <div className="w-16 h-16 rounded-full bg-neutral-900 border border-neutral-800 flex items-center justify-center mx-auto text-neutral-500 mb-3">
               <Sparkles className="w-8 h-8" />
             </div>
-            <h3 className="font-bold text-base text-gray-800">
-              {isSelf ? 'Aún no has creado ningún Pin' : 'Este creador aún no ha publicado pines'}
+            <h3 className="font-bold text-base text-white">
+              {isSelf ? 'Aún no has subido láminas de dibujo' : 'Este artista aún no ha publicado láminas'}
             </h3>
-            <p className="text-xs text-gray-500 mt-1 mb-4">
+            <p className="text-xs text-neutral-400 mt-1 mb-4">
               {isSelf
-                ? 'Sube tus fotos o videos para empezar a inspirar a otros.'
-                : 'Visita más tarde para ver sus nuevas creaciones.'}
+                ? 'Sube tus bocetos, renders o fotos de referencia para inspirar a otros ilustradores.'
+                : 'Visita su perfil más tarde para ver nuevos estudios visuales.'}
             </p>
             {isSelf && (
               <button
                 onClick={onOpenCreatePin}
-                className="px-5 py-2.5 bg-[#E60023] hover:bg-[#ad081b] text-white rounded-full font-bold text-xs shadow-md transition-all active:scale-95"
+                className="px-5 py-2.5 bg-[#E60023] hover:bg-[#ad081b] text-white rounded-full font-bold text-xs shadow-md"
               >
-                Crear tu primer Pin
+                Subir tu primera lámina
               </button>
             )}
           </div>
         )}
       </div>
+
+      {/* Create Board Modal */}
+      {showCreateBoardModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-neutral-900 border border-neutral-800 rounded-3xl p-6 w-full max-w-md shadow-2xl">
+            <h3 className="text-lg font-black text-white mb-2">Crear Tablero de Referencias</h3>
+            <p className="text-xs text-neutral-400 mb-4">
+              Agrupa referencias para tus cómics, pinturas digitales o ejercicios de dibujo.
+            </p>
+            <form onSubmit={handleCreateNewBoard}>
+              <input
+                type="text"
+                placeholder="Nombre del tablero (ej. Poses Dinámicas)"
+                value={newBoardTitle}
+                onChange={(e) => setNewBoardTitle(e.target.value)}
+                autoFocus
+                className="w-full bg-neutral-950 border border-neutral-800 rounded-2xl px-4 py-3 text-sm text-white placeholder:text-neutral-500 focus:outline-none focus:border-red-500 mb-4"
+              />
+              <div className="flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowCreateBoardModal(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-neutral-400 hover:bg-neutral-800"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={creatingBoard || !newBoardTitle.trim()}
+                  className="px-5 py-2 rounded-xl text-xs font-bold bg-[#E60023] hover:bg-[#ad081b] text-white disabled:opacity-50"
+                >
+                  {creatingBoard ? 'Creando...' : 'Crear'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Edit Profile Modal */}
       {isSelf && (

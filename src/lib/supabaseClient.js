@@ -388,14 +388,45 @@ export async function fetchUserSavedPinIds(userId) {
   }
 }
 
-export async function togglePinSaveInDb(userId, pinId) {
+export async function fetchUserBoards(userId) {
+  if (!isSupabaseConfigured || !supabase || !userId) return [];
+  try {
+    const { data, error } = await supabase
+      .from('boards')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+    if (error) {
+      console.warn('Error fetching boards:', error);
+      return [];
+    }
+    return data || [];
+  } catch (e) {
+    return [];
+  }
+}
+
+export async function createBoardInDb(userId, title, description = '') {
+  if (!isSupabaseConfigured || !supabase || !userId) {
+    throw new Error('Debes iniciar sesión para crear un tablero.');
+  }
+  const { data, error } = await supabase
+    .from('boards')
+    .insert({ user_id: userId, title, description })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function togglePinSaveInDb(userId, pinId, boardId = null) {
   if (!isSupabaseConfigured || !supabase || !userId) {
     throw new Error('Inicia sesión para guardar pines.');
   }
 
   const { data: existing } = await supabase
     .from('saved_pins')
-    .select('id')
+    .select('id, board_id')
     .eq('user_id', userId)
     .eq('pin_id', pinId)
     .maybeSingle();
@@ -404,7 +435,10 @@ export async function togglePinSaveInDb(userId, pinId) {
     await supabase.from('saved_pins').delete().eq('user_id', userId).eq('pin_id', pinId);
     return false;
   } else {
-    await supabase.from('saved_pins').insert({ user_id: userId, pin_id: pinId });
+    const insertPayload = { user_id: userId, pin_id: pinId };
+    if (boardId) insertPayload.board_id = boardId;
+    
+    await supabase.from('saved_pins').insert(insertPayload);
 
     // Send real-time notification to pin owner
     try {

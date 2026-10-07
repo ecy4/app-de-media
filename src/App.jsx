@@ -43,6 +43,7 @@ function AppContent() {
   const [notifications, setNotifications] = useState([]);
 
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedOrientation, setSelectedOrientation] = useState('all'); // 'all' | 'vertical' | 'horizontal'
   const [searchQuery, setSearchQuery] = useState('');
   const [activeView, setActiveView] = useState('home'); // 'home' | 'explore' | 'profile' | 'admin'
   const [viewedCreator, setViewedCreator] = useState(null);
@@ -103,7 +104,7 @@ function AppContent() {
   const [loadingMore, setLoadingMore] = useState(false);
 
   // 3. Fetch Dynamic Media from API (60 for Home, Initial 60 for Explore)
-  const loadLiveMedia = useCallback(async (cat, q, view) => {
+  const loadLiveMedia = useCallback(async (cat, q, ori) => {
     setIsLoadingMedia(true);
     setExplorePage(1);
     setHasMoreExplore(true);
@@ -112,6 +113,7 @@ function AppContent() {
       const fetched = await fetchFeedMedia({ 
         category: cat, 
         query: q, 
+        orientation: ori,
         page: 1,
         perPage: count 
       });
@@ -133,6 +135,7 @@ function AppContent() {
       const moreItems = await fetchFeedMedia({
         category: selectedCategory,
         query: searchQuery,
+        orientation: selectedOrientation,
         page: nextPage,
         perPage: 50
       });
@@ -152,11 +155,11 @@ function AppContent() {
     } finally {
       setLoadingMore(false);
     }
-  }, [loadingMore, hasMoreExplore, activeView, explorePage, selectedCategory, searchQuery]);
+  }, [loadingMore, hasMoreExplore, activeView, explorePage, selectedCategory, searchQuery, selectedOrientation]);
 
   useEffect(() => {
-    loadLiveMedia(selectedCategory, searchQuery, activeView);
-  }, [selectedCategory, searchQuery, activeView, loadLiveMedia]);
+    loadLiveMedia(selectedCategory, searchQuery, selectedOrientation);
+  }, [selectedCategory, searchQuery, selectedOrientation, loadLiveMedia]);
 
   // Combined Pins (Database Pins + API Media)
   const allPins = useMemo(() => {
@@ -299,20 +302,24 @@ function AppContent() {
     }
   };
 
-  // Real Save Pin Toggle in Supabase
-  const handleToggleSave = async (pinId) => {
+  // Real Save Pin Toggle in Supabase (with Moodboards support)
+  const handleToggleSave = async (pinId, boardId = null) => {
     if (!user) {
       handleOpenAuth('login');
       return;
     }
 
     try {
-      const nowSaved = await togglePinSaveInDb(user.id, pinId);
+      const nowSaved = await togglePinSaveInDb(user.id, pinId, boardId);
       setSavedPinIds(prev => nowSaved ? [...prev, pinId] : prev.filter(id => id !== pinId));
-      showToast(nowSaved ? 'Pin guardado en tu colección' : 'Pin eliminado de tus guardados');
+      if (nowSaved) {
+        showToast(boardId ? 'Referencia guardada en el tablero temático.' : 'Referencia guardada en tus favoritos.');
+      } else {
+        showToast('Referencia eliminada de tus guardados.');
+      }
     } catch (err) {
       console.error('Save error:', err);
-      showToast(err.message || 'Error al guardar el pin', true);
+      showToast(err.message || 'Error al guardar la referencia', true);
     }
   };
 
@@ -435,7 +442,7 @@ function AppContent() {
   const currentUserRole = user?.role || user?.user_metadata?.role || 'user';
 
   return (
-    <div className="min-h-screen bg-white text-gray-900 flex flex-col font-sans">
+    <div className="min-h-screen bg-neutral-950 text-neutral-100 flex flex-col font-sans selection:bg-red-600 selection:text-white">
       {/* Sticky Navigation Bar */}
       <Navbar
         searchQuery={searchQuery}
@@ -444,6 +451,7 @@ function AppContent() {
         setActiveView={handleNavigateView}
         onResetFilter={() => {
           setSelectedCategory('all');
+          setSelectedOrientation('all');
           setSearchQuery('');
           navigateTo('home');
         }}
@@ -456,15 +464,12 @@ function AppContent() {
         }}
         onNotificationClick={(n) => {
           if (n.type === 'follow' && n.sender_name) {
-            // For follow notifications, navigate directly to their profile
             handleOpenCreatorProfile({ id: n.sender_id, handle: n.sender_name });
           } else if (n.pin_id) {
-            // For pin-related notifications, try opening the pin
             const target = allPins.find(p => p.id === n.pin_id);
             if (target) {
               openPinDetail(target);
             } else {
-              // If pin not loaded in current view, fallback to their profile
               handleOpenCreatorProfile({ id: n.sender_id, handle: n.sender_name });
             }
           } else if (n.sender_name) {
@@ -506,6 +511,8 @@ function AppContent() {
           pins={allPins}
           savedPinIds={savedPinIds}
           selectedCategory={selectedCategory}
+          selectedOrientation={selectedOrientation}
+          onSelectOrientation={(ori) => setSelectedOrientation(ori)}
           onPinClick={openPinDetail}
           onToggleSave={handleToggleSave}
           onShare={handleShare}
@@ -520,12 +527,16 @@ function AppContent() {
         />
       ) : (
         <>
-          {/* Categories Horizontal Scroll Bar */}
+          {/* Categories & Orientation Bar */}
           <CategoryBar
             selectedCategory={selectedCategory}
             onSelectCategory={(cat) => {
               setSelectedCategory(cat);
               navigateTo('home', { category: cat });
+            }}
+            selectedOrientation={selectedOrientation}
+            onSelectOrientation={(ori) => {
+              setSelectedOrientation(ori);
             }}
           />
 

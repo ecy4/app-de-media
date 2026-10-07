@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   X, 
   Share2, 
@@ -11,12 +11,21 @@ import {
   Globe,
   UserCheck,
   UserPlus,
-  Flag
+  Flag,
+  FlipHorizontal,
+  Contrast,
+  Maximize2,
+  Minimize2,
+  Pipette,
+  Copy,
+  FolderPlus,
+  ChevronDown
 } from 'lucide-react';
 import MediaCard from './MediaCard';
 import { useAuth } from '../context/AuthContext';
 import { sanitizeInput, validateSafeUrl } from '../utils/security';
 import { renderWithMentions } from '../utils/mentions';
+import { fetchUserBoards, createBoardInDb } from '../lib/supabaseClient';
 
 export default function PinDetailModal({ 
   pin, 
@@ -29,7 +38,7 @@ export default function PinDetailModal({
   onAddComment, 
   onShare, 
   onSelectRelatedPin, 
-  onOpenAuth,
+  onOpenAuth, 
   onAuthorClick 
 }) {
   const { user } = useAuth();
@@ -42,9 +51,47 @@ export default function PinDetailModal({
   const [submittingReport, setSubmittingReport] = useState(false);
   const [reportSuccess, setReportSuccess] = useState(false);
 
+  // Artist Reference Studio Tools State
+  const [isFlipped, setIsFlipped] = useState(false);
+  const [isGrayscale, setIsGrayscale] = useState(false);
+  const [isFocusMode, setIsFocusMode] = useState(false);
+  const [extractedColors, setExtractedColors] = useState([]);
+  const [colorToast, setColorToast] = useState('');
+  const [directLinkToast, setDirectLinkToast] = useState(false);
+
+  // Boards Dropdown State
+  const [boards, setBoards] = useState([]);
+  const [showBoardMenu, setShowBoardMenu] = useState(false);
+  const [newBoardTitle, setNewBoardTitle] = useState('');
+  const [isCreatingBoard, setIsCreatingBoard] = useState(false);
+
+  const imageRef = useRef(null);
+  const hiddenCanvasRef = useRef(null);
+  const boardMenuRef = useRef(null);
+
   const isSaved = savedPinIds.includes(pin.id) || pin.saved;
   const isLiked = likedPinIds.includes(pin.id);
   const currentLikes = (pin.likes || 0) + (isLiked && !pin.userLikedInitially ? 1 : 0) - (!isLiked && pin.userLikedInitially ? 1 : 0);
+
+  // Load Boards when user is authenticated
+  useEffect(() => {
+    if (user?.id) {
+      fetchUserBoards(user.id).then(userBoards => {
+        setBoards(userBoards || []);
+      }).catch(err => console.warn('Could not load boards:', err));
+    }
+  }, [user?.id]);
+
+  // Close board dropdown on outside click
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (boardMenuRef.current && !boardMenuRef.current.contains(e.target)) {
+        setShowBoardMenu(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Check if following on mount
   useEffect(() => {
@@ -62,16 +109,87 @@ export default function PinDetailModal({
     checkFollow();
   }, [user, pin?.author?.id]);
 
-  // Handle escape key
+  // Artist Keyboard Shortcuts: F = Flip, B = Black & White, Escape = Close
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.key === 'Escape') onClose();
+      // Don't trigger shortcuts if user is typing in an input
+      if (['INPUT', 'TEXTAREA'].includes(e.target.tagName)) return;
+
+      if (e.key === 'Escape') {
+        if (isFocusMode) {
+          setIsFocusMode(false);
+        } else {
+          onClose();
+        }
+      } else if (e.key === 'f' || e.key === 'F') {
+        setIsFlipped(prev => !prev);
+      } else if (e.key === 'b' || e.key === 'B') {
+        setIsGrayscale(prev => !prev);
+      }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onClose]);
+  }, [onClose, isFocusMode]);
 
-  // Handle new comment with XSS sanitization
+  // Color Palette Extraction from Image
+  const handleExtractColors = () => {
+    if (!imageRef.current) return;
+    try {
+      const img = imageRef.current;
+      const canvas = hiddenCanvasRef.current || document.createElement('canvas');
+      canvas.width = 60;
+      canvas.height = 60;
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      
+      const tempImg = new Image();
+      tempImg.crossOrigin = 'anonymous';
+      tempImg.src = pin.mediaUrl;
+      tempImg.onload = () => {
+        ctx.drawImage(tempImg, 0, 0, 60, 60);
+        const imgData = ctx.getImageData(0, 0, 60, 60).data;
+        const colorSamples = [];
+        
+        // Sample points across image
+        for (let i = 0; i < imgData.length; i += 4 * 70) {
+          const r = imgData[i];
+          const g = imgData[i + 1];
+          const b = imgData[i + 2];
+          const hex = `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase()}`;
+          if (!colorSamples.includes(hex)) {
+            colorSamples.push(hex);
+          }
+          if (colorSamples.length >= 5) break;
+        }
+
+        if (colorSamples.length === 0) {
+          colorSamples.push('#1F2937', '#DC2626', '#E5E7EB', '#F59E0B', '#3B82F6');
+        }
+        setExtractedColors(colorSamples);
+      };
+      tempImg.onerror = () => {
+        setExtractedColors(['#18181B', '#E11D48', '#FAFAFA', '#F59E0B', '#2563EB']);
+      };
+    } catch (e) {
+      setExtractedColors(['#18181B', '#E11D48', '#FAFAFA', '#F59E0B', '#2563EB']);
+    }
+  };
+
+  const handleCopyColorHex = (hex) => {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(hex);
+      setColorToast(`Color ${hex} copiado!`);
+      setTimeout(() => setColorToast(''), 2000);
+    }
+  };
+
+  const handleCopyDirectLink = () => {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(pin.mediaUrl);
+      setDirectLinkToast(true);
+      setTimeout(() => setDirectLinkToast(false), 2000);
+    }
+  };
+
   const handleCommentSubmit = (e) => {
     e.preventDefault();
     const cleanText = sanitizeInput(commentInput);
@@ -83,21 +201,21 @@ export default function PinDetailModal({
     }
 
     const newCommentObj = {
-      id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `cm-${Date.now()}`,
-      author: sanitizeInput(user.user_metadata?.full_name || user.email?.split('@')[0] || 'Tú'),
-      avatar: user.user_metadata?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.email || 'user'}`,
+      pin_id: pin.id,
+      user_id: user.id,
+      author_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Artista',
+      author_avatar: user.user_metadata?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.email || 'user'}`,
       text: cleanText,
-      time: 'Justo ahora'
+      created_at: new Date().toISOString()
     };
 
-    onAddComment(pin.id, newCommentObj);
+    onAddComment(newCommentObj);
     setCommentInput('');
   };
 
   const handleCopyLink = () => {
-    const shareUrl = `${window.location.origin}?pin=${pin.id}`;
     if (navigator.clipboard) {
-      navigator.clipboard.writeText(shareUrl);
+      navigator.clipboard.writeText(window.location.href);
       setCopiedToast(true);
       setTimeout(() => setCopiedToast(false), 2000);
     }
@@ -111,12 +229,30 @@ export default function PinDetailModal({
     onToggleLike(pin.id);
   };
 
-  const handleSaveClick = () => {
+  const handleSaveToBoard = async (boardId = null) => {
     if (!user) {
       onOpenAuth('login');
       return;
     }
-    onToggleSave(pin.id);
+    setShowBoardMenu(false);
+    onToggleSave(pin.id, boardId);
+  };
+
+  const handleCreateBoard = async () => {
+    if (!newBoardTitle.trim() || !user?.id) return;
+    setIsCreatingBoard(true);
+    try {
+      const created = await createBoardInDb(user.id, newBoardTitle.trim());
+      if (created) {
+        setBoards(prev => [created, ...prev]);
+        setNewBoardTitle('');
+        handleSaveToBoard(created.id);
+      }
+    } catch (err) {
+      console.error('Error creating board:', err);
+    } finally {
+      setIsCreatingBoard(false);
+    }
   };
 
   const handleFollowToggle = async () => {
@@ -145,34 +281,145 @@ export default function PinDetailModal({
     }
   };
 
-  // Validate destination URL if present
   const safeDestinationUrl = pin.destinationUrl ? validateSafeUrl(pin.destinationUrl) : null;
 
-  // Related pins filter (same category or shared tags, excluding current)
   const relatedPins = allPins.filter(
     (p) => p.id !== pin.id && (p.category === pin.category || p.tags?.some(t => pin.tags?.includes(t)))
   ).slice(0, 8);
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/65 backdrop-blur-sm flex justify-center p-2 sm:p-4 md:p-6 lg:p-8 animate-fadeIn">
+    <div className={`fixed inset-0 z-50 overflow-y-auto flex justify-center p-2 sm:p-4 md:p-6 lg:p-8 animate-fadeIn ${
+      isFocusMode ? 'bg-neutral-950 p-0 sm:p-0 md:p-0 lg:p-0' : 'bg-black/80 backdrop-blur-md'
+    }`}>
+      <canvas ref={hiddenCanvasRef} className="hidden" />
+
       {/* Backdrop */}
-      <div className="fixed inset-0" onClick={onClose} />
+      {!isFocusMode && <div className="fixed inset-0" onClick={onClose} />}
 
       {/* Floating Close Button */}
       <button
         onClick={onClose}
-        className="fixed top-4 right-4 z-50 w-10 h-10 rounded-full bg-white/95 hover:bg-white text-gray-800 shadow-2xl flex items-center justify-center transition-transform hover:scale-110"
-        title="Cerrar (Esc)"
+        className="fixed top-4 right-4 z-50 w-10 h-10 rounded-full bg-neutral-900/90 hover:bg-neutral-800 text-white border border-neutral-700 shadow-2xl flex items-center justify-center transition-transform hover:scale-110"
+        title="Cerrar visor (Esc)"
       >
         <X className="w-5 h-5" />
       </button>
 
       {/* Main Container */}
-      <div className="relative z-10 w-full max-w-5xl my-auto bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col">
-        {/* Main Card */}
-        <div className="grid grid-cols-1 md:grid-cols-12 min-h-[560px]">
-          {/* Left Column: Large Media View */}
-          <div className="md:col-span-6 lg:col-span-7 bg-black flex items-center justify-center p-2 sm:p-4 rounded-t-3xl md:rounded-tr-none md:rounded-l-3xl relative overflow-hidden">
+      <div className={`relative z-10 w-full transition-all duration-300 my-auto rounded-3xl overflow-hidden flex flex-col ${
+        isFocusMode 
+          ? 'max-w-none h-screen bg-neutral-950 rounded-none border-none' 
+          : 'max-w-6xl bg-neutral-900 border border-neutral-800 shadow-2xl'
+      }`}>
+        
+        {/* Main Grid */}
+        <div className={`grid grid-cols-1 ${isFocusMode ? 'grid-cols-1 h-full' : 'md:grid-cols-12 min-h-[580px]'}`}>
+          
+          {/* Media View Column */}
+          <div className={`${
+            isFocusMode ? 'col-span-1 h-full' : 'md:col-span-7 lg:col-span-8'
+          } bg-neutral-950 flex flex-col items-center justify-center relative p-2 sm:p-4 overflow-hidden select-none`}>
+            
+            {/* FLOATING ARTIST TOOLBOX */}
+            <div className="absolute top-4 left-4 z-30 flex items-center gap-1.5 p-1.5 rounded-2xl bg-neutral-900/90 backdrop-blur-xl border border-neutral-800 shadow-2xl">
+              {/* Flip Horizontal */}
+              <button
+                onClick={() => setIsFlipped(prev => !prev)}
+                className={`p-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                  isFlipped 
+                    ? 'bg-[#E60023] text-white shadow-md' 
+                    : 'text-neutral-300 hover:bg-neutral-800 hover:text-white'
+                }`}
+                title="Efecto Espejo (Atajo: F) - Evaluar simetría y proporciones"
+              >
+                <FlipHorizontal className="w-4 h-4" />
+                <span className="hidden sm:inline">Espejo (F)</span>
+              </button>
+
+              {/* Grayscale Toggle */}
+              <button
+                onClick={() => setIsGrayscale(prev => !prev)}
+                className={`p-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                  isGrayscale 
+                    ? 'bg-neutral-100 text-neutral-900 shadow-md font-black' 
+                    : 'text-neutral-300 hover:bg-neutral-800 hover:text-white'
+                }`}
+                title="Valores en B&N (Atajo: B) - Verificar contrastes de luz y sombra"
+              >
+                <Contrast className="w-4 h-4" />
+                <span className="hidden sm:inline">B&N (B)</span>
+              </button>
+
+              {/* Focus Mode */}
+              <button
+                onClick={() => setIsFocusMode(prev => !prev)}
+                className={`p-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                  isFocusMode 
+                    ? 'bg-amber-500 text-neutral-950 shadow-md font-black' 
+                    : 'text-neutral-300 hover:bg-neutral-800 hover:text-white'
+                }`}
+                title="Lienzo Limpio / Pantalla Completa"
+              >
+                {isFocusMode ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+                <span className="hidden sm:inline">{isFocusMode ? 'Salir' : 'Lienzo'}</span>
+              </button>
+
+              {/* Color Picker & Palette */}
+              {pin.type !== 'video' && (
+                <button
+                  onClick={handleExtractColors}
+                  className="p-2 rounded-xl text-xs font-bold text-neutral-300 hover:bg-neutral-800 hover:text-white transition-all flex items-center gap-1.5"
+                  title="Extraer paleta de colores del dibujo"
+                >
+                  <Pipette className="w-4 h-4 text-emerald-400" />
+                  <span className="hidden sm:inline">Paleta</span>
+                </button>
+              )}
+
+              {/* Copy Direct Link */}
+              <button
+                onClick={handleCopyDirectLink}
+                className="p-2 rounded-xl text-xs font-bold text-neutral-300 hover:bg-neutral-800 hover:text-white transition-all flex items-center gap-1.5"
+                title="Copiar enlace directo de imagen (Para PureRef / Photoshop)"
+              >
+                <Copy className="w-4 h-4 text-blue-400" />
+                <span className="hidden sm:inline">Copiar URL</span>
+              </button>
+            </div>
+
+            {/* Extracted Color Palette Overlay */}
+            {extractedColors.length > 0 && (
+              <div className="absolute bottom-4 left-4 z-30 flex items-center gap-2 p-2 rounded-2xl bg-neutral-900/90 backdrop-blur-xl border border-neutral-800 shadow-2xl animate-fadeIn">
+                <span className="text-[11px] font-bold text-neutral-400 px-1">Colores:</span>
+                {extractedColors.map((hex, i) => (
+                  <button
+                    key={i}
+                    onClick={() => handleCopyColorHex(hex)}
+                    style={{ backgroundColor: hex }}
+                    className="w-7 h-7 rounded-xl border border-white/20 shadow-sm transition-transform hover:scale-125 focus:outline-none"
+                    title={`Copiar HEX: ${hex}`}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* Direct Link Toast Notification */}
+            {directLinkToast && (
+              <div className="absolute top-16 left-4 z-40 bg-blue-600 text-white text-xs font-bold px-3 py-1.5 rounded-xl shadow-lg animate-fadeIn flex items-center gap-1.5">
+                <Check className="w-3.5 h-3.5 stroke-[3]" />
+                <span>¡URL directa copiada! Lista para pegar en PureRef o Photoshop</span>
+              </div>
+            )}
+
+            {/* Color Hex Toast */}
+            {colorToast && (
+              <div className="absolute bottom-16 left-4 z-40 bg-emerald-600 text-white text-xs font-bold px-3 py-1.5 rounded-xl shadow-lg animate-fadeIn flex items-center gap-1.5">
+                <Check className="w-3.5 h-3.5 stroke-[3]" />
+                <span>{colorToast}</span>
+              </div>
+            )}
+
+            {/* Media Canvas Element */}
             {pin.type === 'video' ? (
               <video
                 src={pin.mediaUrl}
@@ -181,356 +428,291 @@ export default function PinDetailModal({
                 autoPlay
                 loop
                 playsInline
-                className="max-h-[75vh] w-full object-contain rounded-2xl"
+                className={`max-h-[82vh] w-full object-contain rounded-2xl transition-all duration-300 ${
+                  isFlipped ? 'scale-x-[-1]' : ''
+                } ${isGrayscale ? 'grayscale contrast-125' : ''}`}
               />
             ) : (
               <img
+                ref={imageRef}
                 src={pin.mediaUrl}
                 alt={pin.title}
-                className="max-h-[75vh] w-full object-contain rounded-2xl"
+                crossOrigin="anonymous"
+                className={`max-h-[82vh] w-full object-contain rounded-2xl transition-all duration-300 ${
+                  isFlipped ? 'scale-x-[-1]' : ''
+                } ${isGrayscale ? 'grayscale contrast-125' : ''}`}
               />
             )}
           </div>
 
-          {/* Right Column: Pin Details & Sidebar */}
-          <div className="md:col-span-6 lg:col-span-5 p-6 flex flex-col justify-between bg-white">
-            <div>
-              {/* Action Toolbar */}
-              <div className="flex items-center justify-between pb-4 border-b border-gray-100">
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={handleCopyLink}
-                    className="p-2.5 rounded-full hover:bg-gray-100 text-gray-700 transition-colors"
-                    title="Copiar enlace directo"
-                  >
-                    <Share2 className="w-5 h-5" />
-                  </button>
+          {/* Right Column: Reference Details, Moodboards & Comments */}
+          {!isFocusMode && (
+            <div className="md:col-span-5 lg:col-span-4 p-5 sm:p-6 flex flex-col justify-between bg-neutral-900 text-neutral-100 border-l border-neutral-800">
+              <div>
+                {/* Header Actions & Moodboard Save */}
+                <div className="flex items-center justify-between pb-4 border-b border-neutral-800 relative">
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={handleCopyLink}
+                      className="p-2.5 rounded-full hover:bg-neutral-800 text-neutral-400 hover:text-white transition-colors"
+                      title="Compartir enlace"
+                    >
+                      <Share2 className="w-4 h-4" />
+                    </button>
 
-                  <button
-                    onClick={() => {
-                      if (!user) {
-                        onOpenAuth('login');
-                        return;
-                      }
-                      setShowReportModal(true);
-                    }}
-                    className="p-2.5 rounded-full hover:bg-red-50 text-gray-500 hover:text-red-600 transition-colors"
-                    title="Reportar esta publicación al administrador"
-                  >
-                    <Flag className="w-5 h-5" />
-                  </button>
+                    <button
+                      onClick={() => {
+                        if (!user) {
+                          onOpenAuth('login');
+                          return;
+                        }
+                        setShowReportModal(true);
+                      }}
+                      className="p-2.5 rounded-full hover:bg-neutral-800 text-neutral-400 hover:text-red-400 transition-colors"
+                      title="Reportar"
+                    >
+                      <Flag className="w-4 h-4" />
+                    </button>
 
-                  <button
-                    onClick={handleLikeClick}
-                    className={`p-2.5 rounded-full transition-colors flex items-center gap-1.5 font-bold text-sm ${
-                      isLiked 
-                        ? 'bg-red-50 text-[#E60023]' 
-                        : 'hover:bg-gray-100 text-gray-700'
-                    }`}
-                    title="Me gusta"
-                  >
-                    <Heart className={`w-5 h-5 ${isLiked ? 'fill-current' : ''}`} />
-                    <span>{currentLikes}</span>
-                  </button>
+                    <button
+                      onClick={handleLikeClick}
+                      className={`p-2 rounded-full transition-colors flex items-center gap-1.5 font-bold text-xs ${
+                        isLiked 
+                          ? 'bg-red-500/10 text-red-500' 
+                          : 'hover:bg-neutral-800 text-neutral-400 hover:text-white'
+                      }`}
+                      title="Me gusta"
+                    >
+                      <Heart className={`w-4 h-4 ${isLiked ? 'fill-red-500 text-red-500' : ''}`} />
+                      <span>{currentLikes}</span>
+                    </button>
+                  </div>
 
-                  {copiedToast && (
-                    <span className="text-xs font-semibold bg-black text-white px-2.5 py-1 rounded-full animate-fadeIn">
-                      ¡Copiado!
-                    </span>
-                  )}
-                </div>
-
-                {/* Save Button */}
-                <button
-                  onClick={handleSaveClick}
-                  className={`px-5 py-2.5 rounded-full font-bold text-sm transition-all transform active:scale-95 shadow-sm flex items-center gap-1.5 ${
-                    isSaved
-                      ? 'bg-black text-white hover:bg-neutral-800'
-                      : 'bg-[#E60023] text-white hover:bg-[#ad081b]'
-                  }`}
-                >
-                  {isSaved ? (
-                    <>
-                      <Check className="w-4 h-4 stroke-[3]" />
-                      <span>Guardado</span>
-                    </>
-                  ) : (
-                    'Guardar'
-                  )}
-                </button>
-              </div>
-
-              {/* Title & Description */}
-              <div className="mt-4">
-                <h1 className="text-2xl font-bold text-gray-900 leading-tight">
-                  {pin.title}
-                </h1>
-                <p className="text-gray-600 text-sm mt-3 leading-relaxed">
-                  {renderWithMentions(pin.description, onAuthorClick)}
-                </p>
-
-                {/* Safe Destination URL link */}
-                {safeDestinationUrl && (
-                  <a
-                    href={safeDestinationUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 mt-3 text-xs font-bold text-[#E60023] hover:underline bg-red-50 px-3 py-1.5 rounded-full"
-                  >
-                    <Globe className="w-3.5 h-3.5" />
-                    <span>{safeDestinationUrl.replace(/^https?:\/\//, '').split('/')[0]}</span>
-                    <ExternalLink className="w-3 h-3 ml-0.5" />
-                  </a>
-                )}
-
-                {/* Tags */}
-                {pin.tags && pin.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 mt-3">
-                    {pin.tags.map((tag) => (
-                      <span
-                        key={tag}
-                        className="text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 px-2.5 py-1 rounded-full transition-colors"
+                  {/* Moodboard / Save Button Dropdown */}
+                  <div className="relative" ref={boardMenuRef}>
+                    <div className="flex items-center">
+                      <button
+                        onClick={() => handleSaveToBoard(null)}
+                        className={`px-4 py-2 rounded-l-full font-bold text-xs transition-all flex items-center gap-1.5 ${
+                          isSaved
+                            ? 'bg-neutral-800 text-neutral-200 border border-neutral-700'
+                            : 'bg-[#E60023] hover:bg-[#ad081b] text-white shadow-md shadow-red-600/20'
+                        }`}
                       >
-                        #{tag}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
+                        {isSaved ? <Check className="w-3.5 h-3.5 stroke-[3]" /> : <Bookmark className="w-3.5 h-3.5" />}
+                        <span>{isSaved ? 'Guardado' : 'Guardar'}</span>
+                      </button>
 
-              {/* Author Card (Clickable to visit Creator Profile) */}
-              <div className="flex items-center justify-between mt-6 p-3 bg-gray-50 rounded-2xl">
-                <div 
-                  onClick={handleAuthorClick}
-                  className="flex items-center gap-3 cursor-pointer group/author"
-                  title="Visitar perfil del creador"
-                >
-                  <img
-                    src={pin.author?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80'}
-                    alt={pin.author?.name}
-                    className="w-11 h-11 rounded-full object-cover ring-1 ring-gray-200 group-hover/author:ring-red-300 transition-all"
-                  />
-                  <div>
-                    <h4 className="font-bold text-sm text-gray-900 leading-none group-hover/author:underline">
-                      {pin.author?.name}
-                    </h4>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {pin.author?.handle} • {pin.author?.followers || '1.2k'} seguidores
-                    </p>
+                      <button
+                        onClick={() => {
+                          if (!user) {
+                            onOpenAuth('login');
+                            return;
+                          }
+                          setShowBoardMenu(prev => !prev);
+                        }}
+                        className={`px-2 py-2 rounded-r-full border-l border-black/20 font-bold text-xs transition-all ${
+                          isSaved
+                            ? 'bg-neutral-800 text-neutral-200 border border-neutral-700'
+                            : 'bg-[#E60023] hover:bg-[#ad081b] text-white'
+                        }`}
+                        title="Elegir tablero temático"
+                      >
+                        <ChevronDown className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                    {/* Moodboards Menu */}
+                    {showBoardMenu && (
+                      <div className="absolute right-0 top-11 w-64 bg-neutral-900 border border-neutral-800 rounded-2xl shadow-2xl p-3 z-50 animate-fadeIn">
+                        <div className="text-[11px] font-black uppercase text-neutral-400 mb-2 px-1 flex items-center gap-1.5">
+                          <FolderPlus className="w-3.5 h-3.5 text-[#E60023]" />
+                          <span>Guardar en Tablero</span>
+                        </div>
+
+                        {/* List of existing boards */}
+                        <div className="max-h-40 overflow-y-auto space-y-1 mb-2 pr-1">
+                          <button
+                            onClick={() => handleSaveToBoard(null)}
+                            className="w-full text-left px-3 py-2 rounded-xl text-xs font-semibold text-neutral-200 hover:bg-neutral-800 transition-colors flex items-center justify-between"
+                          >
+                            <span>General (Sin tablero)</span>
+                            <Bookmark className="w-3 h-3 text-neutral-500" />
+                          </button>
+                          {boards.map(b => (
+                            <button
+                              key={b.id}
+                              onClick={() => handleSaveToBoard(b.id)}
+                              className="w-full text-left px-3 py-2 rounded-xl text-xs font-semibold text-neutral-200 hover:bg-neutral-800 transition-colors flex items-center justify-between"
+                            >
+                              <span className="truncate">{b.title}</span>
+                              <span className="text-[10px] text-neutral-500">Moodboard</span>
+                            </button>
+                          ))}
+                        </div>
+
+                        {/* Create new board inline */}
+                        <div className="border-t border-neutral-800 pt-2 flex items-center gap-1">
+                          <input
+                            type="text"
+                            placeholder="Nuevo tablero (ej. Manos)..."
+                            value={newBoardTitle}
+                            onChange={(e) => setNewBoardTitle(e.target.value)}
+                            className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-2.5 py-1.5 text-xs text-white placeholder:text-neutral-500 focus:outline-none focus:border-red-500"
+                          />
+                          <button
+                            onClick={handleCreateBoard}
+                            disabled={isCreatingBoard || !newBoardTitle.trim()}
+                            className="px-2.5 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-white rounded-xl text-xs font-bold disabled:opacity-50"
+                          >
+                            +
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 
-                {user?.id !== pin.author?.id && (
-                  <button
-                    onClick={handleFollowToggle}
-                    className={`px-4 py-2 rounded-full text-xs font-bold transition-all flex items-center gap-1 ${
-                      isFollowing
-                        ? 'bg-gray-200 text-gray-800 hover:bg-gray-300'
-                        : 'bg-black text-white hover:bg-neutral-800'
-                    }`}
-                  >
-                    {isFollowing ? (
-                      <>
-                        <UserCheck className="w-3.5 h-3.5" />
-                        <span>Siguiendo</span>
-                      </>
-                    ) : (
-                      <>
-                        <UserPlus className="w-3.5 h-3.5" />
-                        <span>Seguir</span>
-                      </>
-                    )}
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Comments Section */}
-            <div className="mt-6 pt-4 border-t border-gray-100">
-              <h4 className="font-bold text-sm text-gray-900 mb-3 flex items-center justify-between">
-                <span>Comentarios ({pin.comments?.length || 0})</span>
-              </h4>
-
-              {/* Comments List */}
-              <div className="max-h-44 overflow-y-auto no-scrollbar space-y-3 mb-4 pr-1">
-                {(!pin.comments || pin.comments.length === 0) ? (
-                  <div className="text-center py-4 text-xs text-gray-400">
-                    <MessageSquare className="w-5 h-5 mx-auto mb-1 opacity-50" />
-                    <p>Aún no hay comentarios. ¡Sé el primero en opinar!</p>
+                {/* Copied feedback */}
+                {copiedToast && (
+                  <div className="mt-2 text-xs text-emerald-400 font-bold flex items-center gap-1 bg-emerald-500/10 p-2 rounded-xl">
+                    <Check className="w-3.5 h-3.5 stroke-[3]" />
+                    <span>¡Enlace copiado al portapapeles!</span>
                   </div>
-                ) : (
-                  pin.comments.map((cm) => (
-                    <div key={cm.id} className="flex gap-2.5 items-start text-xs animate-fadeIn">
-                      <img
-                        src={cm.avatar}
-                        alt={cm.author}
-                        className="w-6 h-6 rounded-full object-cover mt-0.5"
-                      />
-                      <div className="flex-1 bg-gray-50 rounded-xl p-2.5">
-                        <div className="flex items-center justify-between">
-                          <span className="font-bold text-gray-900">{cm.author}</span>
-                          <span className="text-[10px] text-gray-400">{cm.time}</span>
-                        </div>
-                        <p className="text-gray-700 mt-1">
-                          {renderWithMentions(cm.text, (authorObj) => {
-                             onClose();
-                             if (onAuthorClick) onAuthorClick(authorObj);
-                          })}
-                        </p>
-                      </div>
-                    </div>
-                  ))
                 )}
+
+                {/* Title & Description */}
+                <div className="mt-5">
+                  <span className="inline-block px-2.5 py-0.5 rounded-full bg-neutral-800 text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-2">
+                    {pin.category || 'Estudio de Arte'}
+                  </span>
+                  <h1 className="text-xl sm:text-2xl font-black text-white leading-tight">
+                    {pin.title}
+                  </h1>
+                  {pin.description && (
+                    <p className="mt-2 text-xs sm:text-sm text-neutral-400 leading-relaxed">
+                      {pin.description}
+                    </p>
+                  )}
+                </div>
+
+                {/* Author Card */}
+                <div className="mt-6 flex items-center justify-between p-3 rounded-2xl bg-neutral-950/60 border border-neutral-800">
+                  <div 
+                    onClick={handleAuthorClick}
+                    className="flex items-center gap-2.5 cursor-pointer group"
+                  >
+                    <img
+                      src={pin.author?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80'}
+                      alt={pin.author?.name || 'Artista'}
+                      className="w-10 h-10 rounded-full object-cover ring-2 ring-neutral-800 group-hover:ring-red-500 transition-all"
+                    />
+                    <div>
+                      <h4 className="font-bold text-xs sm:text-sm text-neutral-200 group-hover:text-white transition-colors">
+                        {pin.author?.name || 'Artista'}
+                      </h4>
+                      <p className="text-[11px] text-neutral-500">
+                        {pin.author?.handle || '@artista'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {!pin.isExternal && pin.author?.id && user?.id !== pin.author?.id && (
+                    <button
+                      onClick={handleFollowToggle}
+                      disabled={loadingFollow}
+                      className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all flex items-center gap-1 ${
+                        isFollowing
+                          ? 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700'
+                          : 'bg-[#E60023] hover:bg-[#ad081b] text-white'
+                      }`}
+                    >
+                      {isFollowing ? <UserCheck className="w-3.5 h-3.5" /> : <UserPlus className="w-3.5 h-3.5" />}
+                      <span>{isFollowing ? 'Siguiendo' : 'Seguir'}</span>
+                    </button>
+                  )}
+                </div>
+
+                {/* Comments Section */}
+                <div className="mt-6">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-neutral-400 mb-3">
+                    <MessageSquare className="w-3.5 h-3.5" />
+                    <span>Notas & Comentarios ({pin.comments?.length || 0})</span>
+                  </div>
+
+                  <div className="max-h-48 overflow-y-auto space-y-2.5 pr-1">
+                    {pin.comments && pin.comments.length > 0 ? (
+                      pin.comments.map((c, i) => (
+                        <div key={c.id || i} className="flex items-start gap-2 text-xs">
+                          <img
+                            src={c.author_avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=user'}
+                            alt={c.author_name}
+                            className="w-6 h-6 rounded-full object-cover shrink-0 mt-0.5"
+                          />
+                          <div className="flex-1 bg-neutral-950 p-2.5 rounded-xl border border-neutral-800/80">
+                            <span className="font-bold text-neutral-300 mr-1.5">{c.author_name}</span>
+                            <span className="text-neutral-400">{renderWithMentions(c.text)}</span>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-xs text-neutral-600 italic py-2">
+                        Sin comentarios aún. Añade notas técnicas o referencias.
+                      </p>
+                    )}
+                  </div>
+                </div>
               </div>
 
-              {/* Add Comment Input */}
-              <form onSubmit={handleCommentSubmit} className="flex items-center gap-2">
+              {/* Comment Input */}
+              <form onSubmit={handleCommentSubmit} className="mt-4 pt-3 border-t border-neutral-800 flex items-center gap-2">
                 <input
                   type="text"
-                  maxLength={250}
-                  placeholder={user ? "Escribe un comentario..." : "Inicia sesión para comentar..."}
+                  placeholder={user ? "Añadir una nota de dibujo..." : "Inicia sesión para comentar"}
                   value={commentInput}
                   onChange={(e) => setCommentInput(e.target.value)}
-                  className="flex-1 text-xs bg-gray-100 rounded-full px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-red-200"
+                  disabled={!user}
+                  className="flex-1 bg-neutral-950 border border-neutral-800 rounded-full px-4 py-2 text-xs text-white placeholder:text-neutral-600 focus:outline-none focus:border-red-500 disabled:opacity-50"
                 />
                 <button
                   type="submit"
-                  disabled={!commentInput.trim()}
-                  className="p-2.5 bg-[#E60023] hover:bg-[#ad081b] disabled:opacity-40 disabled:hover:bg-[#E60023] text-white rounded-full transition-all"
-                  title="Enviar comentario"
+                  disabled={!user || !commentInput.trim()}
+                  className="p-2 rounded-full bg-[#E60023] hover:bg-[#ad081b] text-white disabled:opacity-40 transition-colors"
                 >
                   <Send className="w-3.5 h-3.5" />
                 </button>
               </form>
             </div>
-          </div>
+          )}
         </div>
 
-        {/* Bottom Section: Related Pins */}
-        {relatedPins.length > 0 && (
-          <div className="border-t border-gray-100 bg-gray-50/70 p-6 sm:p-8">
-            <h3 className="text-center font-bold text-lg text-gray-900 mb-6">
-              Más como esto
+        {/* Related Pins Section */}
+        {!isFocusMode && relatedPins.length > 0 && (
+          <div className="p-6 bg-neutral-950 border-t border-neutral-800">
+            <h3 className="text-sm font-bold text-neutral-300 mb-4">
+              Referencias visuales relacionadas
             </h3>
-            <div className="columns-2 sm:columns-3 md:columns-4 gap-4">
-              {relatedPins.map((relatedPin) => (
-                <MediaCard
-                  key={relatedPin.id}
-                  pin={relatedPin}
-                  savedPinIds={savedPinIds}
-                  onPinClick={(p) => {
-                    onSelectRelatedPin(p);
-                    const modalEl = document.querySelector('.overflow-y-auto');
-                    if (modalEl) modalEl.scrollTo({ top: 0, behavior: 'smooth' });
-                  }}
-                  onToggleSave={onToggleSave}
-                  onShare={onShare}
-                  onAuthorClick={onAuthorClick}
-                />
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {relatedPins.map(p => (
+                <div
+                  key={p.id}
+                  onClick={() => onSelectRelatedPin?.(p)}
+                  className="group relative rounded-2xl overflow-hidden aspect-[3/4] cursor-pointer bg-neutral-900 border border-neutral-800"
+                >
+                  <img
+                    src={p.thumbnail || p.mediaUrl}
+                    alt={p.title}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity p-2 flex flex-col justify-end">
+                    <span className="text-xs font-bold text-white line-clamp-1">{p.title}</span>
+                  </div>
+                </div>
               ))}
             </div>
           </div>
         )}
       </div>
-
-      {/* Report Modal */}
-      {showReportModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl relative">
-            <button
-              onClick={() => {
-                setShowReportModal(false);
-                setReportSuccess(false);
-              }}
-              className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-700 rounded-full"
-            >
-              <X className="w-5 h-5" />
-            </button>
-
-            <div className="flex items-center gap-2 mb-3 text-red-600">
-              <Flag className="w-5 h-5" />
-              <h3 className="font-bold text-base text-gray-900">Reportar Publicación</h3>
-            </div>
-
-            {reportSuccess ? (
-              <div className="py-4 text-center">
-                <p className="text-sm font-semibold text-emerald-600">
-                  ¡Gracias! Tu reporte ha sido enviado al equipo de administración para su revisión.
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <p className="text-xs text-gray-600">
-                  ¿Por qué deseas reportar este pin? Tu reporte será revisado en el Panel de Administradores.
-                </p>
-
-                <div className="space-y-2">
-                  {[
-                    'Contenido inapropiado o explícito',
-                    'Spam o información engañosa',
-                    'Violación de derechos de autor',
-                    'Acoso o incitación al odio',
-                    'Otro motivo'
-                  ].map((reason) => (
-                    <label key={reason} className="flex items-center gap-2 text-xs text-gray-700 cursor-pointer p-2 rounded-xl hover:bg-gray-50 border border-gray-100">
-                      <input
-                        type="radio"
-                        name="reportReason"
-                        value={reason}
-                        checked={reportReason === reason}
-                        onChange={(e) => setReportReason(e.target.value)}
-                        className="text-[#E60023] focus:ring-[#E60023]"
-                      />
-                      <span>{reason}</span>
-                    </label>
-                  ))}
-                </div>
-
-                <div className="flex items-center gap-2 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowReportModal(false)}
-                    className="flex-1 py-2.5 text-xs font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-full"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="button"
-                    disabled={submittingReport}
-                    onClick={async () => {
-                      setSubmittingReport(true);
-                      try {
-                        const { supabase } = await import('../lib/supabaseClient');
-                        if (supabase && user) {
-                          await supabase.from('reports').insert({
-                            pin_id: pin.id,
-                            reporter_id: user.id,
-                            reporter_name: user.user_metadata?.full_name || 'Usuario',
-                            reason: reportReason,
-                            status: 'pending'
-                          });
-                        }
-                        setReportSuccess(true);
-                        setTimeout(() => {
-                          setShowReportModal(false);
-                          setReportSuccess(false);
-                        }, 2500);
-                      } catch (err) {
-                        console.error('Error submitting report:', err);
-                      } finally {
-                        setSubmittingReport(false);
-                      }
-                    }}
-                    className="flex-1 py-2.5 text-xs font-bold text-white bg-[#E60023] hover:bg-[#ad081b] rounded-full shadow-sm"
-                  >
-                    {submittingReport ? 'Enviando...' : 'Enviar Reporte'}
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

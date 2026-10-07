@@ -153,14 +153,45 @@ CREATE POLICY "Eliminación de comentarios por autor o admin"
     EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
   );
 
--- 5. TABLA DE PINES GUARDADOS (FAVORITOS)
+-- 5. TABLA DE TABLEROS TEMÁTICOS (MOODBOARDS DE PROYECTO)
+CREATE TABLE IF NOT EXISTS public.boards (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
+  title TEXT NOT NULL,
+  description TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+ALTER TABLE public.boards ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Los usuarios ven sus propios tableros o públicos"
+  ON public.boards FOR SELECT
+  USING (true);
+
+CREATE POLICY "Creación de tableros solo usuarios autenticados"
+  ON public.boards FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Edición de tableros propios"
+  ON public.boards FOR UPDATE
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Eliminación de tableros propios"
+  ON public.boards FOR DELETE
+  USING (auth.uid() = user_id);
+
+-- 6. TABLA DE PINES GUARDADOS (CON TABLERO ASOCIADO)
 CREATE TABLE IF NOT EXISTS public.saved_pins (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
   pin_id UUID REFERENCES public.pins(id) ON DELETE CASCADE NOT NULL,
+  board_id UUID REFERENCES public.boards(id) ON DELETE CASCADE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
   UNIQUE(user_id, pin_id)
 );
+
+-- Si la tabla saved_pins ya existía, asegurar la columna board_id:
+ALTER TABLE public.saved_pins ADD COLUMN IF NOT EXISTS board_id UUID REFERENCES public.boards(id) ON DELETE CASCADE;
 
 ALTER TABLE public.saved_pins ENABLE ROW LEVEL SECURITY;
 

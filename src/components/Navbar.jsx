@@ -64,7 +64,7 @@ export default function Navbar({
   const unreadNotificationsCount = notifications.filter(n => !n.read).length;
 
   return (
-    <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-xl border-b border-gray-100/80 shadow-[0_2px_15px_-3px_rgba(0,0,0,0.04)] transition-all">
+    <header className="sticky top-0 z-40 bg-neutral-950/90 backdrop-blur-xl border-b border-neutral-800 shadow-md transition-all">
       <div className="max-w-[1920px] mx-auto px-3 sm:px-6 py-2.5 flex items-center gap-2 sm:gap-4">
         {/* Logo */}
         <button 
@@ -72,14 +72,14 @@ export default function Navbar({
             setActiveView('home');
             onResetFilter();
           }}
-          className="flex items-center gap-2 focus:outline-none group p-1.5 hover:bg-gray-100/80 rounded-full transition-all"
-          title="PinMedia - Inicio"
+          className="flex items-center gap-2 focus:outline-none group p-1.5 hover:bg-neutral-850 rounded-full transition-all"
+          title="Artist Reference Studio - Inicio"
         >
-          <div className="w-9 h-9 rounded-full bg-[#E60023] flex items-center justify-center text-white font-black text-xl shadow-md shadow-red-500/20 transition-transform group-hover:scale-105 active:scale-95">
-            P
+          <div className="w-9 h-9 rounded-2xl bg-[#E60023] flex items-center justify-center text-white font-black text-xl shadow-md shadow-red-500/20 transition-transform group-hover:scale-105 active:scale-95">
+            A
           </div>
-          <span className="hidden md:inline font-black text-xl tracking-tight text-[#E60023]">
-            PinMedia
+          <span className="hidden md:inline font-black text-xl tracking-tight text-white">
+            Artist<span className="text-[#E60023]">Studio</span>
           </span>
         </button>
 
@@ -90,23 +90,23 @@ export default function Navbar({
               setActiveView('home');
               onResetFilter();
             }}
-            className={`px-4 py-2 rounded-full transition-all duration-200 ${
+            className={`px-4 py-2 rounded-2xl transition-all duration-200 ${
               activeView === 'home'
-                ? 'bg-neutral-900 text-white shadow-sm'
-                : 'text-neutral-700 hover:bg-gray-100 active:scale-95'
+                ? 'bg-neutral-800 text-white shadow-sm ring-1 ring-neutral-700'
+                : 'text-neutral-400 hover:bg-neutral-900 hover:text-white active:scale-95'
             }`}
           >
-            Inicio
+            Estudio
           </button>
           
           <button
             onClick={() => {
               setActiveView('explore');
             }}
-            className={`px-4 py-2 rounded-full transition-all duration-200 flex items-center gap-1.5 ${
+            className={`px-4 py-2 rounded-2xl transition-all duration-200 flex items-center gap-1.5 ${
               activeView === 'explore'
-                ? 'bg-neutral-900 text-white shadow-sm'
-                : 'text-neutral-700 hover:bg-gray-100 active:scale-95'
+                ? 'bg-neutral-800 text-white shadow-sm ring-1 ring-neutral-700'
+                : 'text-neutral-400 hover:bg-neutral-900 hover:text-white active:scale-95'
             }`}
           >
             <Compass className="w-4 h-4" />
@@ -115,19 +115,19 @@ export default function Navbar({
 
           <button
             onClick={handleCreateClick}
-            className="px-4 py-2 rounded-full text-neutral-800 hover:bg-gray-100 transition-all flex items-center gap-1.5 active:scale-95"
+            className="px-4 py-2 rounded-2xl text-neutral-300 hover:bg-neutral-900 hover:text-white transition-all flex items-center gap-1.5 active:scale-95"
           >
             <Plus className="w-4 h-4 text-[#E60023] stroke-[3]" />
-            <span>Crear</span>
+            <span>Subir Lámina</span>
           </button>
 
           {userRole === 'admin' && (
             <button
               onClick={() => setActiveView('admin')}
-              className={`px-4 py-2 rounded-full transition-all duration-200 flex items-center gap-1.5 font-bold shadow-sm ${
+              className={`px-4 py-2 rounded-2xl transition-all duration-200 flex items-center gap-1.5 font-bold shadow-sm ${
                 activeView === 'admin'
                   ? 'bg-red-600 text-white shadow-red-600/30'
-                  : 'bg-red-50 text-red-600 hover:bg-red-100/80 active:scale-95'
+                  : 'bg-red-950/60 text-red-400 hover:bg-red-900/60 active:scale-95 border border-red-800/40'
               }`}
             >
               <ShieldCheck className="w-4 h-4" />
@@ -139,14 +139,14 @@ export default function Navbar({
         {/* Search Bar */}
         <div className="flex-1 relative">
           <div 
-            className={`flex items-center bg-gray-100/80 rounded-full px-4 py-2.5 w-full transition-all duration-200 ${
-              isSearchFocused ? 'ring-4 ring-red-100 bg-white shadow-sm border border-gray-200' : 'hover:bg-gray-200/70'
+            className={`flex items-center bg-neutral-900/90 rounded-2xl px-4 py-2.5 w-full transition-all duration-200 border border-neutral-800 ${
+              isSearchFocused ? 'ring-2 ring-red-500/50 bg-neutral-900 border-neutral-700' : 'hover:bg-neutral-850'
             }`}
           >
-            <Search className="w-5 h-5 text-gray-500 mr-2 shrink-0" />
+            <Search className="w-4 h-4 text-neutral-400 mr-2 shrink-0" />
             <input
               type="text"
-              placeholder="Buscar fotos, videos, arquitectura, diseño..."
+              placeholder="Buscar anatomía, poses, iluminación, manos, fondos..."
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value);
@@ -154,14 +154,14 @@ export default function Navbar({
               }}
               onFocus={() => setIsSearchFocused(true)}
               onBlur={() => setIsSearchFocused(false)}
-              className="w-full bg-transparent focus:outline-none text-sm text-gray-900 placeholder:text-gray-500"
+              className="w-full bg-transparent focus:outline-none text-xs sm:text-sm text-neutral-100 placeholder:text-neutral-500"
             />
             {searchQuery && (
               <button 
                 onClick={() => setSearchQuery('')}
-                className="p-1 hover:bg-gray-200 rounded-full text-gray-500 transition-colors"
+                className="p-1 hover:bg-neutral-800 rounded-full text-neutral-400 transition-colors"
               >
-                <X className="w-4 h-4" />
+                <X className="w-3.5 h-3.5" />
               </button>
             )}
           </div>
