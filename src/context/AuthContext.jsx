@@ -95,6 +95,7 @@ export function AuthProvider({ children }) {
       email,
       password,
       options: {
+        emailRedirectTo: window.location.origin,
         data: {
           full_name: metadata.fullName || email.split('@')[0],
           username: metadata.username || email.split('@')[0].toLowerCase().replace(/[^a-z0-9_]/g, '_'),
@@ -113,6 +114,9 @@ export function AuthProvider({ children }) {
     const { error } = await supabase.auth.resend({
       type: 'signup',
       email,
+      options: {
+        emailRedirectTo: window.location.origin,
+      }
     });
     if (error) throw error;
   };
