@@ -23,6 +23,7 @@
 
 body {
   overflow-y: scroll;
+  overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-color: #fafafa;
@@ -35,4 +36,5 @@ body {
   background: #E60023;
   color: #ffffff;
 }
-html, body { overflow-x: hidden; width: 100%; }
+
+body { overflow-x: hidden; }

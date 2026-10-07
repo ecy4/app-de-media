@@ -33,7 +33,7 @@ export default function CategoryBar({
   };
 
   return (
-    <div className="relative max-w-[1920px] mx-auto px-4 sm:px-6 py-2 group">
+    <div className="relative w-full min-w-0 max-w-[1920px] mx-auto px-4 sm:px-6 py-2 group">
       {/* Subtle Left Scroll Button with Gradient Edge */}
       {showLeftArrow && (
         <div className="absolute left-0 top-0 bottom-0 z-20 flex items-center pl-4 bg-gradient-to-r from-neutral-950 via-neutral-950/80 to-transparent pr-6 pointer-events-none">

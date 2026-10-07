@@ -46,7 +46,7 @@ export default function MasonryGrid({
   }
 
   return (
-    <div className="max-w-[1920px] mx-auto px-3 sm:px-6 py-4">
+    <div className="w-full min-w-0 max-w-[1920px] mx-auto px-3 sm:px-6 py-4">
       <div className="columns-2 sm:columns-3 md:columns-4 lg:columns-5 xl:columns-6 gap-4 [column-fill:_balance]">
         {pins.map((pin) => (
           <MediaCard

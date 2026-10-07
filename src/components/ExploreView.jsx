@@ -58,7 +58,7 @@ export default function ExploreView({
   });
 
   return (
-    <div className="max-w-[1920px] mx-auto px-3 sm:px-6 py-4 animate-fadeIn text-neutral-100">
+    <div className="w-full min-w-0 max-w-[1920px] mx-auto px-3 sm:px-6 py-4 animate-fadeIn text-neutral-100">
       {/* Explore Banner */}
       <div className="mb-8 p-6 sm:p-10 rounded-3xl bg-gradient-to-r from-red-950 via-neutral-900 to-neutral-950 border border-neutral-800 text-white shadow-xl relative overflow-hidden">
         <div className="relative z-10 max-w-2xl">

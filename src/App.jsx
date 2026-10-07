@@ -443,7 +443,7 @@ function AppContent() {
   const currentUserRole = user?.role || user?.user_metadata?.role || 'user';
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-neutral-100 flex flex-col font-sans selection:bg-red-600 selection:text-white overflow-x-hidden">
+    <div className="min-h-screen bg-neutral-950 text-neutral-100 flex flex-col font-sans selection:bg-red-600 selection:text-white">
       {/* Sticky Navigation Bar */}
       <Navbar
         searchQuery={searchQuery}
@@ -539,7 +539,7 @@ function AppContent() {
           )}
 
           {/* Main Masonry Grid */}
-          <main className="flex-1 relative">
+          <main className="flex-1 relative w-full min-w-0">
             {isLoadingMedia && (
               <div className="flex items-center justify-center py-6 gap-2 text-xs font-semibold text-gray-500">
                 <Loader2 className="w-4 h-4 animate-spin text-[#E60023]" />
