@@ -76,9 +76,10 @@ function AppContent() {
           fetchUserLikedPinIds(user.id),
           fetchUserNotifications(user.id)
         ]);
-        setSavedPinIds(saved);
-        setLikedPinIds(liked);
-        setNotifications(notifs);
+        const ids = Array.isArray(saved) ? saved.map(s => (typeof s === 'string' ? s : s.pin_id)) : [];
+        setSavedPinIds(ids);
+        setLikedPinIds(liked || []);
+        setNotifications(notifs || []);
       } else {
         setSavedPinIds([]);
         setLikedPinIds([]);

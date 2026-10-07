@@ -5,10 +5,11 @@ import {
   ChevronDown, 
   Plus, 
   Compass, 
-  X,
-  User,
-  LogOut,
-  ShieldCheck
+  X, 
+  User, 
+  LogOut, 
+  ShieldCheck,
+  Layers 
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import NotificationsPopover from './NotificationsPopover';
@@ -66,21 +67,26 @@ export default function Navbar({
   return (
     <header className="sticky top-0 z-40 bg-neutral-950/90 backdrop-blur-xl border-b border-neutral-800 shadow-md transition-all">
       <div className="max-w-[1920px] mx-auto px-3 sm:px-6 py-2.5 flex items-center gap-2 sm:gap-4">
-        {/* Logo */}
+        {/* Logo & Identity */}
         <button 
           onClick={() => {
             setActiveView('home');
             onResetFilter();
           }}
-          className="flex items-center gap-2 focus:outline-none group p-1.5 hover:bg-neutral-850 rounded-full transition-all"
-          title="Artist Reference Studio - Inicio"
+          className="flex items-center gap-2.5 focus:outline-none group p-1 hover:bg-neutral-900 rounded-2xl transition-all"
+          title="LayoutHub - Visual Moodboard & Creative Studio"
         >
-          <div className="w-9 h-9 rounded-2xl bg-[#E60023] flex items-center justify-center text-white font-black text-xl shadow-md shadow-red-500/20 transition-transform group-hover:scale-105 active:scale-95">
-            A
+          <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-red-600 to-rose-500 flex items-center justify-center text-white shadow-lg shadow-red-600/30 transition-transform group-hover:scale-105 active:scale-95 border border-red-400/20">
+            <Layers className="w-5 h-5 stroke-[2.5]" />
           </div>
-          <span className="hidden md:inline font-black text-xl tracking-tight text-white">
-            Artist<span className="text-[#E60023]">Studio</span>
-          </span>
+          <div className="hidden md:flex flex-col text-left">
+            <span className="font-black text-lg tracking-tight text-white leading-none">
+              Layout<span className="text-[#E60023]">Hub</span>
+            </span>
+            <span className="text-[10px] text-neutral-400 font-semibold tracking-wider uppercase mt-0.5">
+              Visual Moodboard & Creative Studio
+            </span>
+          </div>
         </button>
 
         {/* Navigation Links */}
@@ -146,7 +152,7 @@ export default function Navbar({
             <Search className="w-4 h-4 text-neutral-400 mr-2 shrink-0" />
             <input
               type="text"
-              placeholder="Buscar anatomía, poses, iluminación, manos, fondos..."
+              placeholder="Buscar branding, logos, mockups, tipografía, packaging, posters..."
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value);

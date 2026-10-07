@@ -380,6 +380,21 @@ export async function fetchUserSavedPinIds(userId) {
   try {
     const { data } = await supabase
       .from('saved_pins')
+      .select('pin_id, board_id')
+      .eq('user_id', userId);
+    return data || [];
+  } catch (e) {
+    return [];
+  }
+}
+
+export const fetchUserSavedPinsWithBoards = fetchUserSavedPinIds;
+
+export async function fetchUserSavedPinIdsOnly(userId) {
+  if (!isSupabaseConfigured || !supabase || !userId) return [];
+  try {
+    const { data } = await supabase
+      .from('saved_pins')
       .select('pin_id')
       .eq('user_id', userId);
     return (data || []).map(d => d.pin_id);

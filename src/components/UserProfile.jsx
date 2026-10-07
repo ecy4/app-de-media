@@ -78,16 +78,27 @@ export default function UserProfile({
   const displayWebsite = isSelf ? user?.user_metadata?.website : (profileData?.website || viewedCreator?.website);
   const displayRole = isSelf ? (user?.user_metadata?.role || 'user') : (profileData?.role || viewedCreator?.role || 'user');
 
-  // Load Boards
+  // Boards & Saved Pins with Board Association
+  const [savedPinsMetadata, setSavedPinsMetadata] = useState([]);
+
+  // Load Boards & Saved Pin Associations
   useEffect(() => {
-    async function loadBoards() {
+    async function loadBoardsAndSavedMeta() {
       const targetId = isSelf ? user?.id : resolvedTargetId;
       if (targetId) {
         const loaded = await fetchUserBoards(targetId);
         setBoards(loaded || []);
+
+        try {
+          const { fetchUserSavedPinsWithBoards } = await import('../lib/supabaseClient');
+          const meta = await fetchUserSavedPinsWithBoards(targetId);
+          setSavedPinsMetadata(meta || []);
+        } catch (e) {
+          console.warn('Could not load board associations:', e);
+        }
       }
     }
-    loadBoards();
+    loadBoardsAndSavedMeta();
   }, [isSelf, user?.id, resolvedTargetId]);
 
   // Load Real Profile & Follow Stats from Supabase
@@ -192,7 +203,15 @@ export default function UserProfile({
            (p.author?.handle === `@${displayHandle}`);
   });
 
-  const savedPins = pins.filter((p) => savedPinIds.includes(p.id) || p.saved);
+  const savedPins = pins.filter((p) => {
+    const isSaved = savedPinIds.includes(p.id) || p.saved;
+    if (!isSaved) return false;
+    if (!selectedBoardId) return true;
+    
+    // Check if this pin belongs to the selected board
+    const meta = savedPinsMetadata.find(m => m.pin_id === p.id);
+    return meta?.board_id === selectedBoardId;
+  });
 
   return (
     <div className="max-w-[1920px] mx-auto px-3 sm:px-6 py-4 animate-fadeIn text-neutral-100">
@@ -445,10 +464,32 @@ export default function UserProfile({
             )}
           </div>
         ) : activeTab === 'saved' && isSelf ? (
-          savedPins.length > 0 ? (
-            <MasonryGrid
-              pins={savedPins}
-              savedPinIds={savedPinIds}
+          <div>
+            {/* Active Board Filter Header */}
+            {selectedBoardId && (
+              <div className="mb-6 p-4 rounded-2xl bg-neutral-900 border border-neutral-800 flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <Folder className="w-5 h-5 text-amber-400" />
+                  <div>
+                    <span className="text-[10px] text-neutral-400 uppercase font-bold tracking-wider">Tablero Activo</span>
+                    <h3 className="text-sm font-bold text-white">
+                      {boards.find(b => b.id === selectedBoardId)?.title || 'Tablero de Proyecto'}
+                    </h3>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSelectedBoardId(null)}
+                  className="px-3 py-1.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-xs font-bold text-neutral-300 transition-colors"
+                >
+                  Ver todos los guardados
+                </button>
+              </div>
+            )}
+
+            {savedPins.length > 0 ? (
+              <MasonryGrid
+                pins={savedPins}
+                savedPinIds={savedPinIds}
               onPinClick={onPinClick}
               onToggleSave={onToggleSave}
               onShare={onShare}
@@ -473,7 +514,8 @@ export default function UserProfile({
                 Explorar referencias
               </button>
             </div>
-          )
+          )}
+        </div>
         ) : createdPins.length > 0 ? (
           <MasonryGrid
             pins={createdPins}

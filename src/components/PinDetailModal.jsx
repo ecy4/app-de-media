@@ -12,14 +12,16 @@ import {
   UserCheck,
   UserPlus,
   Flag,
-  FlipHorizontal,
   Contrast,
   Maximize2,
   Minimize2,
   Pipette,
   Copy,
   FolderPlus,
-  ChevronDown
+  ChevronDown,
+  Sun,
+  Moon,
+  Grid
 } from 'lucide-react';
 import MediaCard from './MediaCard';
 import { useAuth } from '../context/AuthContext';
@@ -51,11 +53,12 @@ export default function PinDetailModal({
   const [submittingReport, setSubmittingReport] = useState(false);
   const [reportSuccess, setReportSuccess] = useState(false);
 
-  // Artist Reference Studio Tools State
-  const [isFlipped, setIsFlipped] = useState(false);
+  // LayoutHub Designer Utilities State
+  const [backdropMode, setBackdropMode] = useState('dark'); // 'dark' (#0f0f11) | 'light' (#ffffff) | 'checkerboard' (transparent PNG grid)
   const [isGrayscale, setIsGrayscale] = useState(false);
   const [isFocusMode, setIsFocusMode] = useState(false);
   const [extractedColors, setExtractedColors] = useState([]);
+  const [activeEyeColor, setActiveEyeColor] = useState(null);
   const [colorToast, setColorToast] = useState('');
   const [directLinkToast, setDirectLinkToast] = useState(false);
 
@@ -109,10 +112,9 @@ export default function PinDetailModal({
     checkFollow();
   }, [user, pin?.author?.id]);
 
-  // Artist Keyboard Shortcuts: F = Flip, B = Black & White, Escape = Close
+  // Keyboard Shortcuts: B = Black & White, Escape = Close
   useEffect(() => {
     const handleKeyDown = (e) => {
-      // Don't trigger shortcuts if user is typing in an input
       if (['INPUT', 'TEXTAREA'].includes(e.target.tagName)) return;
 
       if (e.key === 'Escape') {
@@ -121,8 +123,6 @@ export default function PinDetailModal({
         } else {
           onClose();
         }
-      } else if (e.key === 'f' || e.key === 'F') {
-        setIsFlipped(prev => !prev);
       } else if (e.key === 'b' || e.key === 'B') {
         setIsGrayscale(prev => !prev);
       }
@@ -131,26 +131,24 @@ export default function PinDetailModal({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onClose, isFocusMode]);
 
-  // Color Palette Extraction from Image
+  // Color Extraction from Image Canvas
   const handleExtractColors = () => {
     if (!imageRef.current) return;
     try {
-      const img = imageRef.current;
       const canvas = hiddenCanvasRef.current || document.createElement('canvas');
-      canvas.width = 60;
-      canvas.height = 60;
+      canvas.width = 80;
+      canvas.height = 80;
       const ctx = canvas.getContext('2d', { willReadFrequently: true });
       
       const tempImg = new Image();
       tempImg.crossOrigin = 'anonymous';
       tempImg.src = pin.mediaUrl;
       tempImg.onload = () => {
-        ctx.drawImage(tempImg, 0, 0, 60, 60);
-        const imgData = ctx.getImageData(0, 0, 60, 60).data;
+        ctx.drawImage(tempImg, 0, 0, 80, 80);
+        const imgData = ctx.getImageData(0, 0, 80, 80).data;
         const colorSamples = [];
         
-        // Sample points across image
-        for (let i = 0; i < imgData.length; i += 4 * 70) {
+        for (let i = 0; i < imgData.length; i += 4 * 60) {
           const r = imgData[i];
           const g = imgData[i + 1];
           const b = imgData[i + 2];
@@ -158,27 +156,46 @@ export default function PinDetailModal({
           if (!colorSamples.includes(hex)) {
             colorSamples.push(hex);
           }
-          if (colorSamples.length >= 5) break;
+          if (colorSamples.length >= 6) break;
         }
 
         if (colorSamples.length === 0) {
-          colorSamples.push('#1F2937', '#DC2626', '#E5E7EB', '#F59E0B', '#3B82F6');
+          colorSamples.push('#1E1E24', '#E60023', '#2563EB', '#F59E0B', '#10B981', '#FFFFFF');
         }
         setExtractedColors(colorSamples);
       };
       tempImg.onerror = () => {
-        setExtractedColors(['#18181B', '#E11D48', '#FAFAFA', '#F59E0B', '#2563EB']);
+        setExtractedColors(['#111827', '#E11D48', '#2563EB', '#F59E0B', '#10B981', '#FFFFFF']);
       };
     } catch (e) {
-      setExtractedColors(['#18181B', '#E11D48', '#FAFAFA', '#F59E0B', '#2563EB']);
+      setExtractedColors(['#111827', '#E11D48', '#2563EB', '#F59E0B', '#10B981', '#FFFFFF']);
+    }
+  };
+
+  // Eyedropper API (Native browser eyedropper for precise hex pixel pick)
+  const handleOpenNativeEyeDropper = async () => {
+    if (window.EyeDropper) {
+      try {
+        const eyeDropper = new window.EyeDropper();
+        const result = await eyeDropper.open();
+        if (result?.sRGBHex) {
+          const pickedHex = result.sRGBHex.toUpperCase();
+          handleCopyColorHex(pickedHex);
+        }
+      } catch (err) {
+        // User cancelled or unsupported
+      }
+    } else {
+      // Fallback: extract palette
+      handleExtractColors();
     }
   };
 
   const handleCopyColorHex = (hex) => {
     if (navigator.clipboard) {
       navigator.clipboard.writeText(hex);
-      setColorToast(`Color ${hex} copiado!`);
-      setTimeout(() => setColorToast(''), 2000);
+      setColorToast(`Color ${hex} copiado al portapapeles!`);
+      setTimeout(() => setColorToast(''), 2200);
     }
   };
 
@@ -186,7 +203,7 @@ export default function PinDetailModal({
     if (navigator.clipboard) {
       navigator.clipboard.writeText(pin.mediaUrl);
       setDirectLinkToast(true);
-      setTimeout(() => setDirectLinkToast(false), 2000);
+      setTimeout(() => setDirectLinkToast(false), 2200);
     }
   };
 
@@ -203,7 +220,7 @@ export default function PinDetailModal({
     const newCommentObj = {
       pin_id: pin.id,
       user_id: user.id,
-      author_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Artista',
+      author_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Diseñador',
       author_avatar: user.user_metadata?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.email || 'user'}`,
       text: cleanText,
       created_at: new Date().toISOString()
@@ -287,9 +304,16 @@ export default function PinDetailModal({
     (p) => p.id !== pin.id && (p.category === pin.category || p.tags?.some(t => pin.tags?.includes(t)))
   ).slice(0, 8);
 
+  // Background contrast styling mapping
+  const getBackdropClass = () => {
+    if (backdropMode === 'light') return 'bg-[#ffffff] text-neutral-900';
+    if (backdropMode === 'checkerboard') return 'bg-[radial-gradient(#999_1px,transparent_1px)] [background-size:16px_16px] bg-neutral-200';
+    return 'bg-[#0f0f11] text-white'; // default dark
+  };
+
   return (
     <div className={`fixed inset-0 z-50 overflow-y-auto flex justify-center p-2 sm:p-4 md:p-6 lg:p-8 animate-fadeIn ${
-      isFocusMode ? 'bg-neutral-950 p-0 sm:p-0 md:p-0 lg:p-0' : 'bg-black/80 backdrop-blur-md'
+      isFocusMode ? 'bg-[#0f0f11] p-0 sm:p-0 md:p-0 lg:p-0' : 'bg-black/85 backdrop-blur-md'
     }`}>
       <canvas ref={hiddenCanvasRef} className="hidden" />
 
@@ -299,7 +323,7 @@ export default function PinDetailModal({
       {/* Floating Close Button */}
       <button
         onClick={onClose}
-        className="fixed top-4 right-4 z-50 w-10 h-10 rounded-full bg-neutral-900/90 hover:bg-neutral-800 text-white border border-neutral-700 shadow-2xl flex items-center justify-center transition-transform hover:scale-110"
+        className="fixed top-4 right-4 z-50 w-10 h-10 rounded-2xl bg-neutral-900/90 hover:bg-neutral-800 text-white border border-neutral-700 shadow-2xl flex items-center justify-center transition-transform hover:scale-110"
         title="Cerrar visor (Esc)"
       >
         <X className="w-5 h-5" />
@@ -308,7 +332,7 @@ export default function PinDetailModal({
       {/* Main Container */}
       <div className={`relative z-10 w-full transition-all duration-300 my-auto rounded-3xl overflow-hidden flex flex-col ${
         isFocusMode 
-          ? 'max-w-none h-screen bg-neutral-950 rounded-none border-none' 
+          ? 'max-w-none h-screen bg-[#0f0f11] rounded-none border-none' 
           : 'max-w-6xl bg-neutral-900 border border-neutral-800 shadow-2xl'
       }`}>
         
@@ -318,25 +342,55 @@ export default function PinDetailModal({
           {/* Media View Column */}
           <div className={`${
             isFocusMode ? 'col-span-1 h-full' : 'md:col-span-7 lg:col-span-8'
-          } bg-neutral-950 flex flex-col items-center justify-center relative p-2 sm:p-4 overflow-hidden select-none`}>
+          } ${getBackdropClass()} flex flex-col items-center justify-center relative p-3 sm:p-6 overflow-hidden select-none transition-colors duration-300`}>
             
-            {/* FLOATING ARTIST TOOLBOX */}
-            <div className="absolute top-4 left-4 z-30 flex items-center gap-1.5 p-1.5 rounded-2xl bg-neutral-900/90 backdrop-blur-xl border border-neutral-800 shadow-2xl">
-              {/* Flip Horizontal */}
+            {/* FLOATING DESIGNER TOOLBAR */}
+            <div className="absolute top-4 left-4 z-30 flex items-center gap-1.5 p-1.5 rounded-2xl bg-neutral-950/90 backdrop-blur-xl border border-neutral-800 shadow-2xl">
+              
+              {/* Native Eyedropper / Palette Extraction */}
               <button
-                onClick={() => setIsFlipped(prev => !prev)}
-                className={`p-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
-                  isFlipped 
-                    ? 'bg-[#E60023] text-white shadow-md' 
-                    : 'text-neutral-300 hover:bg-neutral-800 hover:text-white'
-                }`}
-                title="Efecto Espejo (Atajo: F) - Evaluar simetría y proporciones"
+                onClick={handleOpenNativeEyeDropper}
+                className="p-2 rounded-xl text-xs font-bold text-neutral-200 hover:bg-neutral-800 hover:text-white transition-all flex items-center gap-1.5"
+                title="Cuentagotas & Extractor de Colores HEX"
               >
-                <FlipHorizontal className="w-4 h-4" />
-                <span className="hidden sm:inline">Espejo (F)</span>
+                <Pipette className="w-4 h-4 text-rose-500" />
+                <span className="hidden sm:inline">Paleta HEX</span>
               </button>
 
-              {/* Grayscale Toggle */}
+              {/* Background Contrast Selector */}
+              <div className="flex items-center gap-0.5 bg-neutral-900 p-0.5 rounded-xl border border-neutral-800">
+                <button
+                  onClick={() => setBackdropMode('dark')}
+                  className={`p-1.5 rounded-lg transition-all ${
+                    backdropMode === 'dark' ? 'bg-neutral-800 text-white shadow-sm' : 'text-neutral-400 hover:text-white'
+                  }`}
+                  title="Fondo Oscuro (#0f0f11) - Evaluar contraste en modo noche"
+                >
+                  <Moon className="w-3.5 h-3.5" />
+                </button>
+
+                <button
+                  onClick={() => setBackdropMode('light')}
+                  className={`p-1.5 rounded-lg transition-all ${
+                    backdropMode === 'light' ? 'bg-white text-black shadow-sm' : 'text-neutral-400 hover:text-white'
+                  }`}
+                  title="Fondo Blanco (#ffffff) - Evaluar sobre lienzo limpio"
+                >
+                  <Sun className="w-3.5 h-3.5" />
+                </button>
+
+                <button
+                  onClick={() => setBackdropMode('checkerboard')}
+                  className={`p-1.5 rounded-lg transition-all ${
+                    backdropMode === 'checkerboard' ? 'bg-neutral-700 text-white shadow-sm' : 'text-neutral-400 hover:text-white'
+                  }`}
+                  title="Fondo Transparente / Cuadrícula PNG"
+                >
+                  <Grid className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              {/* Grayscale Toggle (Luminance & Hierarchy Check) */}
               <button
                 onClick={() => setIsGrayscale(prev => !prev)}
                 className={`p-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
@@ -344,7 +398,7 @@ export default function PinDetailModal({
                     ? 'bg-neutral-100 text-neutral-900 shadow-md font-black' 
                     : 'text-neutral-300 hover:bg-neutral-800 hover:text-white'
                 }`}
-                title="Valores en B&N (Atajo: B) - Verificar contrastes de luz y sombra"
+                title="Monocromo B&N (Atajo: B) - Verificar jerarquía visual y luminancia"
               >
                 <Contrast className="w-4 h-4" />
                 <span className="hidden sm:inline">B&N (B)</span>
@@ -364,23 +418,11 @@ export default function PinDetailModal({
                 <span className="hidden sm:inline">{isFocusMode ? 'Salir' : 'Lienzo'}</span>
               </button>
 
-              {/* Color Picker & Palette */}
-              {pin.type !== 'video' && (
-                <button
-                  onClick={handleExtractColors}
-                  className="p-2 rounded-xl text-xs font-bold text-neutral-300 hover:bg-neutral-800 hover:text-white transition-all flex items-center gap-1.5"
-                  title="Extraer paleta de colores del dibujo"
-                >
-                  <Pipette className="w-4 h-4 text-emerald-400" />
-                  <span className="hidden sm:inline">Paleta</span>
-                </button>
-              )}
-
-              {/* Copy Direct Link */}
+              {/* Copy Direct Image URL for Figma / Adobe Illustrator */}
               <button
                 onClick={handleCopyDirectLink}
-                className="p-2 rounded-xl text-xs font-bold text-neutral-300 hover:bg-neutral-800 hover:text-white transition-all flex items-center gap-1.5"
-                title="Copiar enlace directo de imagen (Para PureRef / Photoshop)"
+                className="p-2 rounded-xl text-xs font-bold text-neutral-200 hover:bg-neutral-800 hover:text-white transition-all flex items-center gap-1.5"
+                title="Copiar URL directa de imagen (pegar en Figma, Illustrator o Photoshop)"
               >
                 <Copy className="w-4 h-4 text-blue-400" />
                 <span className="hidden sm:inline">Copiar URL</span>
@@ -389,14 +431,14 @@ export default function PinDetailModal({
 
             {/* Extracted Color Palette Overlay */}
             {extractedColors.length > 0 && (
-              <div className="absolute bottom-4 left-4 z-30 flex items-center gap-2 p-2 rounded-2xl bg-neutral-900/90 backdrop-blur-xl border border-neutral-800 shadow-2xl animate-fadeIn">
+              <div className="absolute bottom-4 left-4 z-30 flex items-center gap-2 p-2.5 rounded-2xl bg-neutral-950/90 backdrop-blur-xl border border-neutral-800 shadow-2xl animate-fadeIn">
                 <span className="text-[11px] font-bold text-neutral-400 px-1">Colores:</span>
                 {extractedColors.map((hex, i) => (
                   <button
                     key={i}
                     onClick={() => handleCopyColorHex(hex)}
                     style={{ backgroundColor: hex }}
-                    className="w-7 h-7 rounded-xl border border-white/20 shadow-sm transition-transform hover:scale-125 focus:outline-none"
+                    className="w-7 h-7 rounded-xl border border-white/20 shadow-sm transition-transform hover:scale-125 focus:outline-none flex items-center justify-center group"
                     title={`Copiar HEX: ${hex}`}
                   />
                 ))}
@@ -405,15 +447,15 @@ export default function PinDetailModal({
 
             {/* Direct Link Toast Notification */}
             {directLinkToast && (
-              <div className="absolute top-16 left-4 z-40 bg-blue-600 text-white text-xs font-bold px-3 py-1.5 rounded-xl shadow-lg animate-fadeIn flex items-center gap-1.5">
+              <div className="absolute top-16 left-4 z-40 bg-blue-600 text-white text-xs font-bold px-3.5 py-2 rounded-xl shadow-lg animate-fadeIn flex items-center gap-1.5">
                 <Check className="w-3.5 h-3.5 stroke-[3]" />
-                <span>¡URL directa copiada! Lista para pegar en PureRef o Photoshop</span>
+                <span>¡URL limpia copiada! Lista para pegar en Figma o Illustrator</span>
               </div>
             )}
 
             {/* Color Hex Toast */}
             {colorToast && (
-              <div className="absolute bottom-16 left-4 z-40 bg-emerald-600 text-white text-xs font-bold px-3 py-1.5 rounded-xl shadow-lg animate-fadeIn flex items-center gap-1.5">
+              <div className="absolute bottom-16 left-4 z-40 bg-emerald-600 text-white text-xs font-bold px-3.5 py-2 rounded-xl shadow-lg animate-fadeIn flex items-center gap-1.5">
                 <Check className="w-3.5 h-3.5 stroke-[3]" />
                 <span>{colorToast}</span>
               </div>
@@ -429,8 +471,8 @@ export default function PinDetailModal({
                 loop
                 playsInline
                 className={`max-h-[82vh] w-full object-contain rounded-2xl transition-all duration-300 ${
-                  isFlipped ? 'scale-x-[-1]' : ''
-                } ${isGrayscale ? 'grayscale contrast-125' : ''}`}
+                  isGrayscale ? 'grayscale contrast-125' : ''
+                }`}
               />
             ) : (
               <img
@@ -438,14 +480,14 @@ export default function PinDetailModal({
                 src={pin.mediaUrl}
                 alt={pin.title}
                 crossOrigin="anonymous"
-                className={`max-h-[82vh] w-full object-contain rounded-2xl transition-all duration-300 ${
-                  isFlipped ? 'scale-x-[-1]' : ''
-                } ${isGrayscale ? 'grayscale contrast-125' : ''}`}
+                className={`max-h-[82vh] w-full object-contain rounded-2xl transition-all duration-300 drop-shadow-md ${
+                  isGrayscale ? 'grayscale contrast-125' : ''
+                }`}
               />
             )}
           </div>
 
-          {/* Right Column: Reference Details, Moodboards & Comments */}
+          {/* Right Column: Moodboards & Details */}
           {!isFocusMode && (
             <div className="md:col-span-5 lg:col-span-4 p-5 sm:p-6 flex flex-col justify-between bg-neutral-900 text-neutral-100 border-l border-neutral-800">
               <div>
@@ -455,7 +497,7 @@ export default function PinDetailModal({
                     <button
                       onClick={handleCopyLink}
                       className="p-2.5 rounded-full hover:bg-neutral-800 text-neutral-400 hover:text-white transition-colors"
-                      title="Compartir enlace"
+                      title="Compartir recurso"
                     >
                       <Share2 className="w-4 h-4" />
                     </button>
@@ -493,7 +535,7 @@ export default function PinDetailModal({
                     <div className="flex items-center">
                       <button
                         onClick={() => handleSaveToBoard(null)}
-                        className={`px-4 py-2 rounded-l-full font-bold text-xs transition-all flex items-center gap-1.5 ${
+                        className={`px-4 py-2 rounded-l-2xl font-bold text-xs transition-all flex items-center gap-1.5 ${
                           isSaved
                             ? 'bg-neutral-800 text-neutral-200 border border-neutral-700'
                             : 'bg-[#E60023] hover:bg-[#ad081b] text-white shadow-md shadow-red-600/20'
@@ -511,26 +553,26 @@ export default function PinDetailModal({
                           }
                           setShowBoardMenu(prev => !prev);
                         }}
-                        className={`px-2 py-2 rounded-r-full border-l border-black/20 font-bold text-xs transition-all ${
+                        className={`px-2 py-2 rounded-r-2xl border-l border-black/20 font-bold text-xs transition-all ${
                           isSaved
                             ? 'bg-neutral-800 text-neutral-200 border border-neutral-700'
                             : 'bg-[#E60023] hover:bg-[#ad081b] text-white'
                         }`}
-                        title="Elegir tablero temático"
+                        title="Asignar a tablero / cliente"
                       >
                         <ChevronDown className="w-3.5 h-3.5" />
                       </button>
                     </div>
 
-                    {/* Moodboards Menu */}
+                    {/* Moodboard Projects Dropdown */}
                     {showBoardMenu && (
                       <div className="absolute right-0 top-11 w-64 bg-neutral-900 border border-neutral-800 rounded-2xl shadow-2xl p-3 z-50 animate-fadeIn">
                         <div className="text-[11px] font-black uppercase text-neutral-400 mb-2 px-1 flex items-center gap-1.5">
                           <FolderPlus className="w-3.5 h-3.5 text-[#E60023]" />
-                          <span>Guardar en Tablero</span>
+                          <span>Tablero / Proyecto</span>
                         </div>
 
-                        {/* List of existing boards */}
+                        {/* List of existing project boards */}
                         <div className="max-h-40 overflow-y-auto space-y-1 mb-2 pr-1">
                           <button
                             onClick={() => handleSaveToBoard(null)}
@@ -546,16 +588,16 @@ export default function PinDetailModal({
                               className="w-full text-left px-3 py-2 rounded-xl text-xs font-semibold text-neutral-200 hover:bg-neutral-800 transition-colors flex items-center justify-between"
                             >
                               <span className="truncate">{b.title}</span>
-                              <span className="text-[10px] text-neutral-500">Moodboard</span>
+                              <span className="text-[10px] text-neutral-500">Proyecto</span>
                             </button>
                           ))}
                         </div>
 
-                        {/* Create new board inline */}
+                        {/* Create new project board */}
                         <div className="border-t border-neutral-800 pt-2 flex items-center gap-1">
                           <input
                             type="text"
-                            placeholder="Nuevo tablero (ej. Manos)..."
+                            placeholder="Ej. Campaña Marca X..."
                             value={newBoardTitle}
                             onChange={(e) => setNewBoardTitle(e.target.value)}
                             className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-2.5 py-1.5 text-xs text-white placeholder:text-neutral-500 focus:outline-none focus:border-red-500"
@@ -584,7 +626,7 @@ export default function PinDetailModal({
                 {/* Title & Description */}
                 <div className="mt-5">
                   <span className="inline-block px-2.5 py-0.5 rounded-full bg-neutral-800 text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-2">
-                    {pin.category || 'Estudio de Arte'}
+                    {pin.category || 'LayoutHub Resource'}
                   </span>
                   <h1 className="text-xl sm:text-2xl font-black text-white leading-tight">
                     {pin.title}
@@ -596,7 +638,7 @@ export default function PinDetailModal({
                   )}
                 </div>
 
-                {/* Author Card */}
+                {/* Creator / Studio Profile */}
                 <div className="mt-6 flex items-center justify-between p-3 rounded-2xl bg-neutral-950/60 border border-neutral-800">
                   <div 
                     onClick={handleAuthorClick}
@@ -604,15 +646,15 @@ export default function PinDetailModal({
                   >
                     <img
                       src={pin.author?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80'}
-                      alt={pin.author?.name || 'Artista'}
+                      alt={pin.author?.name || 'Creador'}
                       className="w-10 h-10 rounded-full object-cover ring-2 ring-neutral-800 group-hover:ring-red-500 transition-all"
                     />
                     <div>
                       <h4 className="font-bold text-xs sm:text-sm text-neutral-200 group-hover:text-white transition-colors">
-                        {pin.author?.name || 'Artista'}
+                        {pin.author?.name || 'Creador'}
                       </h4>
                       <p className="text-[11px] text-neutral-500">
-                        {pin.author?.handle || '@artista'}
+                        {pin.author?.handle || '@creador'}
                       </p>
                     </div>
                   </div>
@@ -633,11 +675,11 @@ export default function PinDetailModal({
                   )}
                 </div>
 
-                {/* Comments Section */}
+                {/* Comments & Design Feedback */}
                 <div className="mt-6">
                   <div className="flex items-center gap-1.5 text-xs font-bold text-neutral-400 mb-3">
                     <MessageSquare className="w-3.5 h-3.5" />
-                    <span>Notas & Comentarios ({pin.comments?.length || 0})</span>
+                    <span>Feedback & Notas de Diseño ({pin.comments?.length || 0})</span>
                   </div>
 
                   <div className="max-h-48 overflow-y-auto space-y-2.5 pr-1">
@@ -657,7 +699,7 @@ export default function PinDetailModal({
                       ))
                     ) : (
                       <p className="text-xs text-neutral-600 italic py-2">
-                        Sin comentarios aún. Añade notas técnicas o referencias.
+                        Sin comentarios aún. Añade notas técnicas o especificaciones de diseño.
                       </p>
                     )}
                   </div>
@@ -668,7 +710,7 @@ export default function PinDetailModal({
               <form onSubmit={handleCommentSubmit} className="mt-4 pt-3 border-t border-neutral-800 flex items-center gap-2">
                 <input
                   type="text"
-                  placeholder={user ? "Añadir una nota de dibujo..." : "Inicia sesión para comentar"}
+                  placeholder={user ? "Añadir nota de diseño o tipografía..." : "Inicia sesión para comentar"}
                   value={commentInput}
                   onChange={(e) => setCommentInput(e.target.value)}
                   disabled={!user}
@@ -690,7 +732,7 @@ export default function PinDetailModal({
         {!isFocusMode && relatedPins.length > 0 && (
           <div className="p-6 bg-neutral-950 border-t border-neutral-800">
             <h3 className="text-sm font-bold text-neutral-300 mb-4">
-              Referencias visuales relacionadas
+              Recursos y Mockups Relacionados
             </h3>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {relatedPins.map(p => (

@@ -1,16 +1,16 @@
 /**
- * Artist Reference Studio - Categories and Technical Artistic Queries
+ * LayoutHub - Categories and Technical Query Constants for Graphic Designers
  */
 
 export const CATEGORIES = [
-  { id: 'all', label: 'Todo', query: 'art drawing reference aesthetic' },
-  { id: 'anatomy-poses', label: 'Poses & Anatomía', query: 'human anatomy pose model figure drawing reference' },
-  { id: 'faces-expressions', label: 'Rostros & Expresiones', query: 'portrait face expression emotion reference character' },
-  { id: 'lighting-chiaroscuro', label: 'Iluminación & Claroscuro', query: 'dramatic lighting chiaroscuro shadow portrait studio' },
-  { id: 'backgrounds-perspective', label: 'Fondos & Perspectiva', query: 'landscape scenery perspective architecture interior scenery' },
-  { id: 'concept-creatures', label: 'Concept Art & Criaturas', query: 'concept art fantasy sci-fi creature monster digital art' },
-  { id: 'clothing-drapery', label: 'Ropa & Telas', query: 'clothing drapery folds costume fabric reference garment' },
-  { id: 'hands-gestures', label: 'Manos & Gestos', query: 'hands gesture drawing anatomy reference fingers palm' }
+  { id: 'all', label: 'Todo', query: 'graphic design branding visual layout' },
+  { id: 'branding-logos', label: 'Branding & Logos', query: 'minimalist logo branding visual identity design mockup' },
+  { id: 'mockups-packaging', label: 'Mockups & Packaging', query: 'packaging box product branding mockup stationery' },
+  { id: 'typography-posters', label: 'Tipografía & Posters', query: 'typography swiss poster editorial layout print design' },
+  { id: 'ui-web', label: 'UI & Web Design', query: 'ui ux web design app interface clean layout' },
+  { id: 'editorial-magazines', label: 'Editorial & Revistas', query: 'magazine editorial layout editorial design book' },
+  { id: 'palettes-gradients', label: 'Paletas & Gradientes', query: 'abstract gradient background minimal color palette' },
+  { id: 'textures-backdrops', label: 'Texturas & Fondos', query: 'clean studio backdrop paper texture marble background' }
 ];
 
 export const ORIENTATIONS = [
@@ -22,37 +22,37 @@ export const ORIENTATIONS = [
 export const FEATURED_TRENDS = [
   {
     id: 'trend-1',
-    title: 'Estudio de Anatomía Dinámica',
-    subtitle: 'Poses, escorzo y proporciones',
-    category: 'anatomy-poses',
-    image: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=800&q=80'
-  },
-  {
-    id: 'trend-2',
-    title: 'Claroscuro y Luces de Borde (Rim Light)',
-    subtitle: 'Iluminación dramática para render',
-    category: 'lighting-chiaroscuro',
+    title: 'Identidad Visual & Papelería Corporativa',
+    subtitle: 'Branding de alta gama y papelería',
+    category: 'branding-logos',
     image: 'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?auto=format&fit=crop&w=800&q=80'
   },
   {
+    id: 'trend-2',
+    title: 'Packaging Minimalista & Cajas 3D',
+    subtitle: 'Mockups de producto y render fotorrealista',
+    category: 'mockups-packaging',
+    image: 'https://images.unsplash.com/photo-1589939705384-5185137a7f0f?auto=format&fit=crop&w=800&q=80'
+  },
+  {
     id: 'trend-3',
-    title: 'Retratos, Expresiones y Planos Asimétricos',
-    subtitle: 'Emociones y microexpresiones',
-    category: 'faces-expressions',
-    image: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80'
+    title: 'Diseño Editorial & Estilo Suizo',
+    subtitle: 'Grillas tipográficas y posters',
+    category: 'typography-posters',
+    image: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=800&q=80'
   },
   {
     id: 'trend-4',
-    title: 'Fondos, Escenarios y Punto de Fuga',
-    subtitle: 'Perspectiva de 1, 2 y 3 puntos',
-    category: 'backgrounds-perspective',
-    image: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=800&q=80'
+    title: 'Interfaces Móviles & Diseño Web Limpio',
+    subtitle: 'UI Kits, componentes y microinteracciones',
+    category: 'ui-web',
+    image: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=800&q=80'
   },
   {
     id: 'trend-5',
-    title: 'Pliegues de Ropa y Texturas de Tela',
-    subtitle: 'Gravedad, tensión y caída',
-    category: 'clothing-drapery',
-    image: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=800&q=80'
+    title: 'Gradientes Líquidos & Paletas Cromáticas',
+    subtitle: 'Texturas holográficas y colores contemporáneos',
+    category: 'palettes-gradients',
+    image: 'https://images.unsplash.com/photo-1550684848-fac1c5b4e853?auto=format&fit=crop&w=800&q=80'
   }
 ];
