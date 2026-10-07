@@ -443,7 +443,7 @@ function AppContent() {
   const currentUserRole = user?.role || user?.user_metadata?.role || 'user';
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-neutral-100 flex flex-col font-sans selection:bg-red-600 selection:text-white">
+    <div className="min-h-screen bg-neutral-950 text-neutral-100 flex flex-col font-sans selection:bg-red-600 selection:text-white overflow-x-hidden">
       {/* Sticky Navigation Bar */}
       <Navbar
         searchQuery={searchQuery}

@@ -35,3 +35,4 @@ body {
   background: #E60023;
   color: #ffffff;
 }
+html, body { overflow-x: hidden; width: 100%; }
