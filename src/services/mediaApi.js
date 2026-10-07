@@ -14,54 +14,92 @@ export async function fetchFeedMedia({ category = 'all', query = '', mediaType =
   // 1. PIXABAY API (Images & Videos)
   if (PIXABAY_KEY && PIXABAY_KEY !== 'tu-pixabay-api-key') {
     try {
-      const isVideoQuery = mediaType === 'videos' || category === 'videos';
-      const pixabayUrl = isVideoQuery
-        ? `https://pixabay.com/api/videos/?key=${encodeURIComponent(PIXABAY_KEY)}&q=${encodeURIComponent(searchTerm || 'nature')}&per_page=${perPage}&page=${page}&safesearch=true`
-        : `https://pixabay.com/api/?key=${encodeURIComponent(PIXABAY_KEY)}&q=${encodeURIComponent(searchTerm || 'aesthetic')}&image_type=photo&per_page=${perPage}&page=${page}&safesearch=true`;
+      const isVideoOnly = mediaType === 'videos' || category === 'videos';
+      const isImageOnly = mediaType === 'images' || category === 'photography';
 
-      const res = await fetch(pixabayUrl);
-      if (res.ok) {
-        const data = await res.json();
-        const hits = data.hits || [];
+      const mapPixabayItem = (item, isVideo, idx) => {
+        const authorName = item.user || 'Pixabay Creator';
+        const authorHandle = `@${authorName.toLowerCase().replace(/[^a-z0-9_]/g, '')}`;
+        const tagsArray = item.tags ? item.tags.split(',').map(t => t.trim()) : [category];
 
-        if (hits.length > 0) {
-          return hits.map((item, idx) => {
-            const isVideo = Boolean(item.videos);
-            const authorName = item.user || 'Pixabay Creator';
-            const authorHandle = `@${authorName.toLowerCase().replace(/[^a-z0-9_]/g, '')}`;
-            const tagsArray = item.tags ? item.tags.split(',').map(t => t.trim()) : [category];
+        const videoUrl = isVideo
+          ? (item.videos?.medium?.url || item.videos?.large?.url || item.videos?.small?.url || '')
+          : null;
 
-            // Resolve best video resolution
-            const videoUrl = isVideo
-              ? (item.videos?.medium?.url || item.videos?.large?.url || item.videos?.small?.url || '')
-              : null;
+        return {
+          id: `pixabay-${isVideo ? 'vid' : 'img'}-${item.id}-${idx}`,
+          title: item.tags ? item.tags.split(',')[0].trim() : `${searchTerm || 'Medio'} HD`,
+          type: isVideo ? 'video' : 'image',
+          mediaUrl: isVideo ? videoUrl : (item.largeImageURL || item.webformatURL),
+          thumbnail: isVideo
+            ? (item.picture_id ? `https://i.vimeocdn.com/video/${item.picture_id}_640x360.jpg` : item.videos?.tiny?.url)
+            : (item.webformatURL || item.previewURL),
+          category: category !== 'all' ? category : (isVideo ? 'videos' : 'photography'),
+          author: {
+            id: `pixabay-${item.user_id || item.id}`,
+            name: authorName,
+            handle: authorHandle,
+            avatar: item.userImageURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${authorHandle}`,
+            role: 'user'
+          },
+          description: `Descubierto en Pixabay: ${item.tags || 'Inspiración visual de alta calidad.'}`,
+          aspectRatio: isVideo
+            ? 'aspect-[16/9]'
+            : (item.imageHeight > item.imageWidth * 1.3 ? 'aspect-[2/3]' : item.imageWidth > item.imageHeight * 1.3 ? 'aspect-[16/9]' : 'aspect-[3/4]'),
+          saved: false,
+          likes: item.likes || 0,
+          tags: tagsArray.slice(0, 4),
+          comments: [],
+          isExternal: true
+        };
+      };
 
-            return {
-              id: `pixabay-${item.id}-${idx}`,
-              title: item.tags ? item.tags.split(',')[0].trim() : `${searchTerm || 'Medio'} HD`,
-              type: isVideo ? 'video' : 'image',
-              mediaUrl: isVideo ? videoUrl : (item.largeImageURL || item.webformatURL),
-              thumbnail: isVideo ? (item.picture_id ? `https://i.vimeocdn.com/video/${item.picture_id}_640x360.jpg` : item.videos?.tiny?.url) : (item.webformatURL || item.previewURL),
-              category: category !== 'all' ? category : (isVideo ? 'videos' : 'photography'),
-              author: {
-                id: `pixabay-${item.user_id || item.id}`,
-                name: authorName,
-                handle: authorHandle,
-                avatar: item.userImageURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${authorHandle}`,
-                role: 'user'
-              },
-              description: `Descubierto en Pixabay: ${item.tags || 'Inspiración visual de alta calidad.'}`,
-              aspectRatio: isVideo
-                ? 'aspect-[16/9]'
-                : (item.imageHeight > item.imageWidth * 1.3 ? 'aspect-[2/3]' : item.imageWidth > item.imageHeight * 1.3 ? 'aspect-[16/9]' : 'aspect-[3/4]'),
-              saved: false,
-              likes: item.likes || 0,
-              tags: tagsArray.slice(0, 4),
-              comments: [],
-              isExternal: true
-            };
-          });
+      if (isVideoOnly) {
+        // Videos only
+        const res = await fetch(`https://pixabay.com/api/videos/?key=${encodeURIComponent(PIXABAY_KEY)}&q=${encodeURIComponent(searchTerm || 'nature')}&per_page=${perPage}&page=${page}&safesearch=true`);
+        if (res.ok) {
+          const data = await res.json();
+          return (data.hits || []).map((item, idx) => mapPixabayItem(item, true, idx));
         }
+      } else if (isImageOnly) {
+        // Photos only
+        const res = await fetch(`https://pixabay.com/api/?key=${encodeURIComponent(PIXABAY_KEY)}&q=${encodeURIComponent(searchTerm || 'aesthetic')}&image_type=photo&per_page=${perPage}&page=${page}&safesearch=true`);
+        if (res.ok) {
+          const data = await res.json();
+          return (data.hits || []).map((item, idx) => mapPixabayItem(item, false, idx));
+        }
+      } else {
+        // Blended Feed: Fetch both photos & videos simultaneously
+        const videoCount = Math.max(4, Math.floor(perPage * 0.25)); // 25% videos
+        const imageCount = perPage - videoCount; // 75% photos
+
+        const [imageRes, videoRes] = await Promise.all([
+          fetch(`https://pixabay.com/api/?key=${encodeURIComponent(PIXABAY_KEY)}&q=${encodeURIComponent(searchTerm || 'aesthetic')}&image_type=photo&per_page=${imageCount}&page=${page}&safesearch=true`),
+          fetch(`https://pixabay.com/api/videos/?key=${encodeURIComponent(PIXABAY_KEY)}&q=${encodeURIComponent(searchTerm || 'nature')}&per_page=${videoCount}&page=${page}&safesearch=true`)
+        ]);
+
+        const imageData = imageRes.ok ? await imageRes.json() : { hits: [] };
+        const videoData = videoRes.ok ? await videoRes.json() : { hits: [] };
+
+        const mappedImages = (imageData.hits || []).map((item, idx) => mapPixabayItem(item, false, idx));
+        const mappedVideos = (videoData.hits || []).map((item, idx) => mapPixabayItem(item, true, idx));
+
+        // Interleave videos into the images feed (e.g. 1 video every 3 images)
+        const combined = [];
+        let vIdx = 0;
+        mappedImages.forEach((img, i) => {
+          combined.push(img);
+          if ((i + 1) % 3 === 0 && vIdx < mappedVideos.length) {
+            combined.push(mappedVideos[vIdx++]);
+          }
+        });
+
+        // Append any remaining videos
+        while (vIdx < mappedVideos.length) {
+          combined.push(mappedVideos[vIdx++]);
+        }
+
+        if (combined.length > 0) return combined;
       }
     } catch (e) {
       console.warn('Pixabay API error:', e);
