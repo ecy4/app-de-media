@@ -142,8 +142,14 @@ export default function UserProfile({
     }
   };
 
-  // Filter created pins
+  // Filter created pins (Banned/hidden pins are hidden for everyone except the author or admin)
+  const isUserAdmin = user?.role === 'admin' || user?.user_metadata?.role === 'admin';
   const createdPins = pins.filter((p) => {
+    // If hidden, only show to author or admin
+    if (p.isHidden && !isSelf && !isUserAdmin) {
+      return false;
+    }
+
     if (isSelf) {
       return p.author?.id === user?.id || p.user_id === user?.id || p.author?.handle === `@${displayHandle}`;
     } else {

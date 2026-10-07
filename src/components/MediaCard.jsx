@@ -55,17 +55,17 @@ export default function MediaCard({
   };
 
   return (
-    <div className="break-inside-avoid mb-5 group cursor-pointer">
+    <div className="break-inside-avoid mb-6 group cursor-pointer">
       {/* Media Wrapper */}
       <div
         onClick={() => onPinClick(pin)}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
-        className="relative overflow-hidden rounded-2xl bg-gray-100 shadow-sm transition-all duration-300"
+        className="relative overflow-hidden rounded-3xl bg-gray-100 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.06)] hover:shadow-[0_15px_30px_-5px_rgba(0,0,0,0.15)] transition-all duration-300 transform group-hover:-translate-y-0.5"
       >
         {/* Video badge */}
         {pin.type === 'video' && (
-          <div className="absolute top-3 left-3 z-20 bg-black/60 backdrop-blur-md text-white text-[11px] font-semibold px-2 py-1 rounded-full flex items-center gap-1 shadow-sm">
+          <div className="absolute top-3.5 left-3.5 z-20 bg-black/60 backdrop-blur-md text-white text-[11px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1 shadow-md">
             <Play className="w-3 h-3 fill-current" />
             <span>Video</span>
           </div>
@@ -82,20 +82,20 @@ export default function MediaCard({
               loop
               playsInline
               preload="metadata"
-              className="w-full h-auto object-cover rounded-2xl transition-transform duration-500 group-hover:scale-[1.02]"
+              className="w-full h-auto object-cover rounded-3xl transition-transform duration-700 group-hover:scale-105"
             />
           </div>
         ) : (
           <div className="relative overflow-hidden">
             {!imageLoaded && (
-              <div className="absolute inset-0 bg-gray-200 animate-pulse rounded-2xl min-h-[220px]" />
+              <div className="absolute inset-0 bg-gray-200 animate-pulse rounded-3xl min-h-[220px]" />
             )}
             <img
               src={pin.mediaUrl}
               alt={pin.title}
               loading="lazy"
               onLoad={() => setImageLoaded(true)}
-              className={`w-full h-auto object-cover rounded-2xl transition-all duration-500 group-hover:scale-[1.02] ${
+              className={`w-full h-auto object-cover rounded-3xl transition-all duration-700 group-hover:scale-105 ${
                 imageLoaded ? 'opacity-100' : 'opacity-0'
               }`}
             />
@@ -104,7 +104,7 @@ export default function MediaCard({
 
         {/* Hover Overlay */}
         <div 
-          className={`absolute inset-0 bg-black/35 rounded-2xl transition-opacity duration-200 pointer-events-none ${
+          className={`absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20 rounded-3xl transition-opacity duration-300 pointer-events-none ${
             isHovered ? 'opacity-100' : 'opacity-0'
           }`} 
         />

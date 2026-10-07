@@ -64,36 +64,36 @@ export default function Navbar({
   const unreadNotificationsCount = notifications.filter(n => !n.read).length;
 
   return (
-    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-gray-100 transition-all">
-      <div className="max-w-[1920px] mx-auto px-3 sm:px-6 py-3 flex items-center gap-2 sm:gap-4">
+    <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-xl border-b border-gray-100/80 shadow-[0_2px_15px_-3px_rgba(0,0,0,0.04)] transition-all">
+      <div className="max-w-[1920px] mx-auto px-3 sm:px-6 py-2.5 flex items-center gap-2 sm:gap-4">
         {/* Logo */}
         <button 
           onClick={() => {
             setActiveView('home');
             onResetFilter();
           }}
-          className="flex items-center gap-1.5 focus:outline-none group p-2 hover:bg-gray-100 rounded-full transition-colors"
+          className="flex items-center gap-2 focus:outline-none group p-1.5 hover:bg-gray-100/80 rounded-full transition-all"
           title="PinMedia - Inicio"
         >
-          <div className="w-8 h-8 rounded-full bg-[#E60023] flex items-center justify-center text-white font-bold text-xl shadow-sm transition-transform group-hover:scale-105">
+          <div className="w-9 h-9 rounded-full bg-[#E60023] flex items-center justify-center text-white font-black text-xl shadow-md shadow-red-500/20 transition-transform group-hover:scale-105 active:scale-95">
             P
           </div>
-          <span className="hidden md:inline font-bold text-lg tracking-tight text-[#E60023]">
+          <span className="hidden md:inline font-black text-xl tracking-tight text-[#E60023]">
             PinMedia
           </span>
         </button>
 
         {/* Navigation Links */}
-        <div className="hidden lg:flex items-center gap-1 font-semibold text-sm">
+        <div className="hidden lg:flex items-center gap-1.5 font-bold text-sm">
           <button
             onClick={() => {
               setActiveView('home');
               onResetFilter();
             }}
-            className={`px-4 py-2.5 rounded-full transition-colors ${
+            className={`px-4 py-2 rounded-full transition-all duration-200 ${
               activeView === 'home'
-                ? 'bg-black text-white'
-                : 'text-gray-700 hover:bg-gray-100'
+                ? 'bg-neutral-900 text-white shadow-sm'
+                : 'text-neutral-700 hover:bg-gray-100 active:scale-95'
             }`}
           >
             Inicio
@@ -103,10 +103,10 @@ export default function Navbar({
             onClick={() => {
               setActiveView('explore');
             }}
-            className={`px-4 py-2.5 rounded-full transition-colors flex items-center gap-1.5 ${
+            className={`px-4 py-2 rounded-full transition-all duration-200 flex items-center gap-1.5 ${
               activeView === 'explore'
-                ? 'bg-black text-white'
-                : 'text-gray-700 hover:bg-gray-100'
+                ? 'bg-neutral-900 text-white shadow-sm'
+                : 'text-neutral-700 hover:bg-gray-100 active:scale-95'
             }`}
           >
             <Compass className="w-4 h-4" />
@@ -115,7 +115,7 @@ export default function Navbar({
 
           <button
             onClick={handleCreateClick}
-            className="px-4 py-2.5 rounded-full text-gray-700 hover:bg-gray-100 transition-colors flex items-center gap-1.5"
+            className="px-4 py-2 rounded-full text-neutral-800 hover:bg-gray-100 transition-all flex items-center gap-1.5 active:scale-95"
           >
             <Plus className="w-4 h-4 text-[#E60023] stroke-[3]" />
             <span>Crear</span>
@@ -124,10 +124,10 @@ export default function Navbar({
           {userRole === 'admin' && (
             <button
               onClick={() => setActiveView('admin')}
-              className={`px-4 py-2.5 rounded-full transition-colors flex items-center gap-1.5 font-bold ${
+              className={`px-4 py-2 rounded-full transition-all duration-200 flex items-center gap-1.5 font-bold shadow-sm ${
                 activeView === 'admin'
-                  ? 'bg-red-600 text-white'
-                  : 'text-red-600 hover:bg-red-50'
+                  ? 'bg-red-600 text-white shadow-red-600/30'
+                  : 'bg-red-50 text-red-600 hover:bg-red-100/80 active:scale-95'
               }`}
             >
               <ShieldCheck className="w-4 h-4" />
@@ -139,8 +139,8 @@ export default function Navbar({
         {/* Search Bar */}
         <div className="flex-1 relative">
           <div 
-            className={`flex items-center bg-[#efefef] rounded-full px-4 py-2.5 w-full transition-all duration-200 ${
-              isSearchFocused ? 'ring-4 ring-red-100 bg-white shadow-inner border border-gray-200' : 'hover:bg-[#e2e2e2]'
+            className={`flex items-center bg-gray-100/80 rounded-full px-4 py-2.5 w-full transition-all duration-200 ${
+              isSearchFocused ? 'ring-4 ring-red-100 bg-white shadow-sm border border-gray-200' : 'hover:bg-gray-200/70'
             }`}
           >
             <Search className="w-5 h-5 text-gray-500 mr-2 shrink-0" />
