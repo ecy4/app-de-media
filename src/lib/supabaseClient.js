@@ -277,6 +277,29 @@ export async function toggleFollowUser(currentUserId, targetCreatorId) {
         following_id: targetCreatorId
       });
     if (error) throw error;
+
+    // Send Notification
+    try {
+      const { data: currentUser } = await supabase
+        .from('profiles')
+        .select('full_name, avatar_url')
+        .eq('id', currentUserId)
+        .single();
+      
+      if (currentUser) {
+        await supabase.from('notifications').insert({
+          user_id: targetCreatorId,
+          sender_id: currentUserId,
+          sender_name: currentUser.full_name,
+          sender_avatar: currentUser.avatar_url,
+          type: 'follow',
+          message: 'ha comenzado a seguirte.'
+        });
+      }
+    } catch (e) {
+      console.warn('Could not send follow notification', e);
+    }
+
     return true; // Now following
   }
 }

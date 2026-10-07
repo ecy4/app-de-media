@@ -33,11 +33,28 @@ export default function PinDetailModal({
   const { user } = useAuth();
   const [commentInput, setCommentInput] = useState('');
   const [isFollowing, setIsFollowing] = useState(false);
+  const [loadingFollow, setLoadingFollow] = useState(false);
   const [copiedToast, setCopiedToast] = useState(false);
 
   const isSaved = savedPinIds.includes(pin.id) || pin.saved;
   const isLiked = likedPinIds.includes(pin.id);
   const currentLikes = (pin.likes || 0) + (isLiked && !pin.userLikedInitially ? 1 : 0) - (!isLiked && pin.userLikedInitially ? 1 : 0);
+
+  // Check if following on mount
+  useEffect(() => {
+    async function checkFollow() {
+      if (user && pin?.author?.id) {
+        try {
+          const { checkIsFollowingUser } = await import('../lib/supabaseClient');
+          const following = await checkIsFollowingUser(user.id, pin.author.id);
+          setIsFollowing(following);
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    }
+    checkFollow();
+  }, [user, pin?.author?.id]);
 
   // Handle escape key
   useEffect(() => {
@@ -96,12 +113,23 @@ export default function PinDetailModal({
     onToggleSave(pin.id);
   };
 
-  const handleFollowToggle = () => {
+  const handleFollowToggle = async () => {
     if (!user) {
       onOpenAuth('login');
       return;
     }
-    setIsFollowing(!isFollowing);
+    if (loadingFollow || !pin?.author?.id) return;
+    
+    setLoadingFollow(true);
+    try {
+      const { toggleFollowUser } = await import('../lib/supabaseClient');
+      const nowFollowing = await toggleFollowUser(user.id, pin.author.id);
+      setIsFollowing(nowFollowing);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingFollow(false);
+    }
   };
 
   const handleAuthorClick = () => {
