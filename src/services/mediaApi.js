@@ -344,7 +344,7 @@ export async function fetchFeedMedia({
 }) {
   const catObj = CATEGORIES.find(c => c.id === category);
   const resolvedCategoryQuery = catObj ? (catObj.id === 'all' ? 'graphic design visual inspiration' : catObj.query) : category;
-  const searchTerm = query.trim() ? `${query.trim()} design mockup` : resolvedCategoryQuery;
+  const searchTerm = query.trim() ? query.trim() : resolvedCategoryQuery;
 
   const queryParams = { searchTerm, category, orientation, mediaType, page, perPage };
 

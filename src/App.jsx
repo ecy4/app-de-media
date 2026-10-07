@@ -159,7 +159,7 @@ function AppContent() {
   }, [loadingMore, hasMoreExplore, activeView, explorePage, selectedCategory, searchQuery, selectedOrientation]);
 
   useEffect(() => {
-    loadLiveMedia(selectedCategory, searchQuery, selectedOrientation);
+    const timer = setTimeout(() => { loadLiveMedia(selectedCategory, searchQuery, selectedOrientation); }, 600); return () => clearTimeout(timer);
   }, [selectedCategory, searchQuery, selectedOrientation, loadLiveMedia]);
 
   // Combined Pins (Database Pins + API Media)
@@ -624,3 +624,4 @@ export default function App() {
     </AuthProvider>
   );
 }
+
