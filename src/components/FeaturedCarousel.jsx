@@ -20,10 +20,10 @@ export default function FeaturedCarousel({ onSelectCollection }) {
             <Flame className="w-5 h-5 fill-current" />
           </div>
           <div>
-            <h2 className="text-base sm:text-lg font-bold text-gray-900 tracking-tight">
+            <h2 className="text-base sm:text-lg font-bold text-white tracking-tight">
               Tendencias y Colecciones Destacadas
             </h2>
-            <p className="text-xs text-gray-500 hidden sm:block">
+            <p className="text-xs text-neutral-400 hidden sm:block">
               Inspiración visual seleccionada diariamente en la comunidad
             </p>
           </div>
@@ -33,14 +33,14 @@ export default function FeaturedCarousel({ onSelectCollection }) {
         <div className="flex items-center gap-1.5">
           <button
             onClick={() => scroll('left')}
-            className="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-100 transition-colors text-gray-700"
+            className="w-8 h-8 rounded-full border border-neutral-800 flex items-center justify-center hover:bg-neutral-800 transition-colors text-white"
             title="Anterior"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
           <button
             onClick={() => scroll('right')}
-            className="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-100 transition-colors text-gray-700"
+            className="w-8 h-8 rounded-full border border-neutral-800 flex items-center justify-center hover:bg-neutral-800 transition-colors text-white"
             title="Siguiente"
           >
             <ChevronRight className="w-4 h-4" />

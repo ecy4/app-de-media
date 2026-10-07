@@ -162,14 +162,14 @@ export default function MediaCard({
 
       {/* Pin Meta Information */}
       <div className="mt-2 px-1">
-        <h3 className="font-semibold text-sm text-gray-900 line-clamp-1 leading-snug group-hover:text-[#E60023] transition-colors">
+        <h3 className="font-semibold text-sm text-neutral-200 line-clamp-1 leading-snug group-hover:text-[#E60023] transition-colors">
           {pin.title}
         </h3>
         
-        <div className="flex items-center justify-between mt-1 text-xs text-gray-600">
+        <div className="flex items-center justify-between mt-1 text-xs text-neutral-400">
           <div 
             onClick={handleAuthorClick}
-            className="flex items-center gap-1.5 min-w-0 hover:text-black cursor-pointer group/author"
+            className="flex items-center gap-1.5 min-w-0 hover:text-white cursor-pointer group/author"
           >
             <img
               src={pin.author?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80'}
@@ -189,13 +189,13 @@ export default function MediaCard({
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={(e) => e.stopPropagation()}
-                  className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-blue-100 text-blue-600 hover:bg-blue-200 transition-colors"
+                  className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 transition-colors"
                   title="Licencia CC - Ver original en Openverse"
                 >
                   Openverse CC
                 </a>
               ) : (
-                <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">
+                <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-neutral-800 text-neutral-400">
                   {pin.source_provider}
                 </span>
               )

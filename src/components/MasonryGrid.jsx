@@ -15,13 +15,13 @@ export default function MasonryGrid({
   if (!pins || pins.length === 0) {
     return (
       <div className="py-24 flex flex-col items-center justify-center text-center px-4 animate-fadeIn">
-        <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center text-[#E60023] mb-4">
+        <div className="w-16 h-16 rounded-full bg-red-500/20 flex items-center justify-center text-[#E60023] mb-4">
           <Sparkles className="w-8 h-8" />
         </div>
-        <h3 className="text-xl font-bold text-gray-900">
+        <h3 className="text-xl font-bold text-white">
           Aún no hay publicaciones en esta categoría
         </h3>
-        <p className="text-sm text-gray-500 max-w-md mt-2 mb-6">
+        <p className="text-sm text-neutral-400 max-w-md mt-2 mb-6">
           ¡Sé el primero en inspirar a la comunidad subiendo tus fotos o videos!
         </p>
         <div className="flex items-center gap-3">
