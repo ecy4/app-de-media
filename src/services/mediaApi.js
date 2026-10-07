@@ -301,7 +301,7 @@ export async function fetchFeedMedia({
   perPage = 40 
 }) {
   const catObj = CATEGORIES.find(c => c.id === category);
-  const resolvedCategoryQuery = catObj ? (catObj.id === 'all' ? 'graphic design branding layout poster mockup' : catObj.query) : category;
+  const resolvedCategoryQuery = catObj ? (catObj.id === 'all' ? 'graphic design visual inspiration' : catObj.query) : category;
   const searchTerm = query.trim() ? `${query.trim()} design mockup` : resolvedCategoryQuery;
 
   const queryParams = { searchTerm, category, orientation, mediaType, page, perPage };
