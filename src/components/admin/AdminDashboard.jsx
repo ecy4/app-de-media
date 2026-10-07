@@ -446,7 +446,7 @@ export default function AdminDashboard({
                 placeholder="Filtrar por título o autor..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-9 pr-4 py-1.5 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-200"
+                className="w-full pl-9 pr-4 py-1.5 text-xs bg-gray-50 text-gray-900 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-200"
               />
             </div>
             <span className="text-xs text-gray-500 font-medium">
@@ -761,7 +761,7 @@ export default function AdminDashboard({
                 placeholder="Buscar usuarios por nombre o @username..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-9 pr-4 py-1.5 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-200"
+                className="w-full pl-9 pr-4 py-1.5 text-xs bg-gray-50 text-gray-900 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-200"
               />
             </div>
             <button
@@ -960,7 +960,7 @@ export default function AdminDashboard({
                 value={broadcastMessage}
                 onChange={(e) => setBroadcastMessage(e.target.value)}
                 placeholder="Ejemplo: ¡Mantenimiento programado hoy a las 23:00 hrs! Nueva actualización disponible..."
-                className="w-full p-3.5 bg-gray-50 border border-gray-200 rounded-2xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-[#E60023] transition-all resize-none"
+                className="w-full p-3.5 bg-gray-50 text-gray-900 border border-gray-200 rounded-2xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-[#E60023] transition-all resize-none"
               />
               <span className="text-[10px] text-gray-400 block text-right mt-1">
                 {broadcastMessage.length}/300 caracteres

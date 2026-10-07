@@ -287,7 +287,7 @@ export default function CreatePinModal({ isOpen, onClose, onPinCreated }) {
                   placeholder="Dale un título llamativo a tu idea..."
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  className="w-full px-4 py-3 text-base sm:text-lg font-bold bg-gray-50/70 border border-gray-200 rounded-2xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-[#E60023] transition-all shadow-sm"
+                  className="w-full px-4 py-3 text-base sm:text-lg font-bold bg-gray-50/70 text-gray-900 border border-gray-200 rounded-2xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-[#E60023] transition-all shadow-sm"
                 />
               </div>
 
@@ -302,7 +302,7 @@ export default function CreatePinModal({ isOpen, onClose, onPinCreated }) {
                   placeholder="Cuenta la historia detrás de este pin o comparte detalles..."
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  className="w-full px-4 py-3 text-xs sm:text-sm bg-gray-50/70 border border-gray-200 rounded-2xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-[#E60023] transition-all resize-none shadow-sm"
+                  className="w-full px-4 py-3 text-xs sm:text-sm bg-gray-50/70 text-gray-900 border border-gray-200 rounded-2xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-[#E60023] transition-all resize-none shadow-sm"
                 />
               </div>
 
@@ -314,7 +314,7 @@ export default function CreatePinModal({ isOpen, onClose, onPinCreated }) {
                 <select
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
-                  className="w-full px-4 py-3 text-xs sm:text-sm bg-gray-50/70 border border-gray-200 rounded-2xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-[#E60023] cursor-pointer font-bold text-gray-800 transition-all shadow-sm"
+                  className="w-full px-4 py-3 text-xs sm:text-sm bg-gray-50/70 text-gray-900 border border-gray-200 rounded-2xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-[#E60023] cursor-pointer font-bold text-gray-800 transition-all shadow-sm"
                 >
                   {CATEGORIES.filter((c) => c.id !== 'all').map((cat) => (
                     <option key={cat.id} value={cat.id}>
@@ -336,7 +336,7 @@ export default function CreatePinModal({ isOpen, onClose, onPinCreated }) {
                     placeholder="https://tuportafolio.com"
                     value={destinationUrl}
                     onChange={(e) => setDestinationUrl(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2.5 text-xs sm:text-sm bg-gray-50/70 border border-gray-200 rounded-2xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-[#E60023] transition-all shadow-sm"
+                    className="w-full pl-10 pr-4 py-2.5 text-xs sm:text-sm bg-gray-50/70 text-gray-900 border border-gray-200 rounded-2xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-[#E60023] transition-all shadow-sm"
                   />
                 </div>
               </div>
@@ -353,7 +353,7 @@ export default function CreatePinModal({ isOpen, onClose, onPinCreated }) {
                     placeholder="fotografia, retrato, cinemático..."
                     value={tagsInput}
                     onChange={(e) => setTagsInput(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2.5 text-xs sm:text-sm bg-gray-50/70 border border-gray-200 rounded-2xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-[#E60023] transition-all shadow-sm"
+                    className="w-full pl-10 pr-4 py-2.5 text-xs sm:text-sm bg-gray-50/70 text-gray-900 border border-gray-200 rounded-2xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-[#E60023] transition-all shadow-sm"
                   />
                 </div>
               </div>

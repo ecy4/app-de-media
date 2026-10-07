@@ -170,7 +170,7 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login', onSu
                         placeholder="Ej. Sofía Valdés"
                         value={fullName}
                         onChange={(e) => setFullName(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-red-400 transition-all"
+                        className="w-full pl-10 pr-4 py-2.5 text-sm bg-gray-50 text-gray-900 border border-gray-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-red-400 transition-all"
                       />
                     </div>
                   </div>
@@ -185,7 +185,7 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login', onSu
                         placeholder="sofia_ux"
                         value={username}
                         onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '_'))}
-                        className="w-full pl-9 pr-4 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-red-400 transition-all"
+                        className="w-full pl-9 pr-4 py-2.5 text-sm bg-gray-50 text-gray-900 border border-gray-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-red-400 transition-all"
                       />
                     </div>
                   </div>
@@ -202,7 +202,7 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login', onSu
                     placeholder="tu@email.com o usuario"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-red-400 transition-all"
+                    className="w-full pl-10 pr-4 py-2.5 text-sm bg-gray-50 text-gray-900 border border-gray-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-red-400 transition-all"
                   />
                 </div>
               </div>
@@ -218,7 +218,7 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login', onSu
                     placeholder="Mínimo 6 caracteres"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-red-400 transition-all"
+                    className="w-full pl-10 pr-4 py-2.5 text-sm bg-gray-50 text-gray-900 border border-gray-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-red-400 transition-all"
                   />
                 </div>
               </div>

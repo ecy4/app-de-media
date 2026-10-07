@@ -167,7 +167,7 @@ export default function EditProfileModal({ isOpen, onClose, onSuccess }) {
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 placeholder="Tu nombre"
-                className="w-full pl-10 pr-4 py-2 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-200"
+                className="w-full pl-10 pr-4 py-2 text-sm bg-gray-50 text-gray-900 border border-gray-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-200"
               />
             </div>
           </div>
@@ -185,7 +185,7 @@ export default function EditProfileModal({ isOpen, onClose, onSuccess }) {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder="usuario"
-                className="w-full pl-9 pr-4 py-2 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-200"
+                className="w-full pl-9 pr-4 py-2 text-sm bg-gray-50 text-gray-900 border border-gray-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-200"
               />
             </div>
           </div>
@@ -201,7 +201,7 @@ export default function EditProfileModal({ isOpen, onClose, onSuccess }) {
               onChange={(e) => setBio(e.target.value)}
               placeholder="Cuéntale al mundo sobre ti y lo que te inspira..."
               maxLength={200}
-              className="w-full px-4 py-2 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-200 resize-none"
+              className="w-full px-4 py-2 text-sm bg-gray-50 text-gray-900 border border-gray-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-200 resize-none"
             />
           </div>
 
@@ -217,7 +217,7 @@ export default function EditProfileModal({ isOpen, onClose, onSuccess }) {
                 value={website}
                 onChange={(e) => setWebsite(e.target.value)}
                 placeholder="https://tuportafolio.com"
-                className="w-full pl-10 pr-4 py-2 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-200"
+                className="w-full pl-10 pr-4 py-2 text-sm bg-gray-50 text-gray-900 border border-gray-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-200"
               />
             </div>
           </div>
