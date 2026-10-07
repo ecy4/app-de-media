@@ -44,8 +44,8 @@ export default function UserProfile({
 
   // Determine target user ID
   const isSelf = !viewedCreator || viewedCreator.id === user?.id || viewedCreator.handle === `@${user?.user_metadata?.username}`;
-  const targetId = isSelf ? user?.id : viewedCreator.id;
-
+  
+  // Display variables
   const displayName = isSelf
     ? (user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Usuario')
     : (viewedCreator.name || 'Creador');
@@ -65,32 +65,53 @@ export default function UserProfile({
   const displayWebsite = isSelf ? user?.user_metadata?.website : viewedCreator.website;
   const displayRole = isSelf ? (user?.user_metadata?.role || 'user') : (viewedCreator.role || 'user');
 
+  const [resolvedTargetId, setResolvedTargetId] = useState(isSelf ? user?.id : null);
+
   // Load Real Follow Stats from Supabase 'user_follows' table
   useEffect(() => {
     async function loadFollows() {
-      if (targetId) {
-        const stats = await fetchCreatorFollowStats(targetId);
+      let finalId = isSelf ? user?.id : viewedCreator?.id;
+
+      // If id is not a UUID (e.g. it's a handle like '@angel'), resolve it from profiles
+      if (!isSelf && finalId && !finalId.includes('-')) {
+        try {
+          const { supabase } = await import('../lib/supabaseClient');
+          const { data } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('username', displayHandle)
+            .maybeSingle();
+          if (data) finalId = data.id;
+        } catch (err) {
+          console.error('Error resolving profile ID:', err);
+        }
+      }
+
+      setResolvedTargetId(finalId);
+
+      if (finalId) {
+        const stats = await fetchCreatorFollowStats(finalId);
         setFollowStats(stats);
 
         if (!isSelf && user?.id) {
-          const following = await checkIsFollowingUser(user.id, targetId);
+          const following = await checkIsFollowingUser(user.id, finalId);
           setIsFollowing(following);
         }
       }
     }
     loadFollows();
-  }, [targetId, user?.id, isSelf]);
+  }, [viewedCreator, isSelf, user?.id, displayHandle]);
 
   const handleFollowToggle = async () => {
     if (!user) {
       onOpenAuth?.('login');
       return;
     }
-    if (!targetId || isSelf) return;
+    if (!resolvedTargetId || isSelf) return;
 
     setLoadingFollow(true);
     try {
-      const nowFollowing = await toggleFollowUser(user.id, targetId);
+      const nowFollowing = await toggleFollowUser(user.id, resolvedTargetId);
       setIsFollowing(nowFollowing);
       setFollowStats(prev => ({
         ...prev,
@@ -110,7 +131,7 @@ export default function UserProfile({
     if (isSelf) {
       return p.author?.id === user?.id || p.user_id === user?.id || p.author?.handle === `@${displayHandle}`;
     } else {
-      return p.author?.id === targetId || p.user_id === targetId || p.author?.handle === `@${displayHandle}`;
+      return p.author?.id === resolvedTargetId || p.user_id === resolvedTargetId || p.author?.handle === `@${displayHandle}`;
     }
   });
 
