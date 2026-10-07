@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   X, 
   UploadCloud, 
@@ -29,6 +29,20 @@ export default function CreatePinModal({ isOpen, onClose, onPinCreated }) {
   const [isDragging, setIsDragging] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      setFile(null);
+      setPreviewUrl(null);
+      setTitle('');
+      setDescription('');
+      setCategory('photography');
+      setDestinationUrl('');
+      setTagsInput('');
+      setErrorMessage(null);
+      setIsSubmitting(false);
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
