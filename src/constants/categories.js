@@ -10,8 +10,12 @@ export const CATEGORIES = [
   { id: 'typography', label: 'Tipografía & Posters', query: 'swiss typography poster editorial layout print' },
   { id: 'ui', label: 'UI & Web Design', query: 'ui ux web design app interface clean layout' },
   { id: 'editorial', label: 'Editorial & Libros', query: 'magazine editorial layout book design print' },
+  { id: '3d', label: '3D & Renders', query: '3d render abstract shape c4d blender minimal design' },
+  { id: 'stationery', label: 'Stationery & Papelería', query: 'stationery mockup business card corporate identity' },
   { id: 'palettes', label: 'Paletas & Gradientes', query: 'abstract gradient background minimal color palette' },
-  { id: 'textures', label: 'Texturas & Fondos', query: 'clean studio backdrop paper texture marble background' }
+  { id: 'textures', label: 'Texturas & Fondos', query: 'clean studio backdrop paper texture marble background' },
+  { id: 'icons', label: 'Iconos & Sistemas', query: 'vector icon design pictogram minimal system' },
+  { id: 'brutalist', label: 'Brutalismo Gráfico', query: 'brutalist poster typography design editorial print' }
 ];
 
 export const ORIENTATIONS = [

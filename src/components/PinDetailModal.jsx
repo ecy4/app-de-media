@@ -21,7 +21,10 @@ import {
   ChevronDown,
   Sun,
   Moon,
-  Grid
+  Grid,
+  Download,
+  Code,
+  LayoutGrid
 } from 'lucide-react';
 import MediaCard from './MediaCard';
 import { useAuth } from '../context/AuthContext';
@@ -57,6 +60,7 @@ export default function PinDetailModal({
   const [backdropMode, setBackdropMode] = useState('dark'); // 'dark' (#0f0f11) | 'light' (#ffffff) | 'checkerboard' (transparent PNG grid)
   const [isGrayscale, setIsGrayscale] = useState(false);
   const [isFocusMode, setIsFocusMode] = useState(false);
+  const [showRuleOfThirds, setShowRuleOfThirds] = useState(false);
   const [extractedColors, setExtractedColors] = useState([]);
   const [activeEyeColor, setActiveEyeColor] = useState(null);
   const [colorToast, setColorToast] = useState('');
@@ -112,7 +116,7 @@ export default function PinDetailModal({
     checkFollow();
   }, [user, pin?.author?.id]);
 
-  // Keyboard Shortcuts: B = Black & White, Escape = Close
+  // Keyboard Shortcuts: G = Grayscale, R = Rule of Thirds, C = Copy first HEX, Escape = Close
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (['INPUT', 'TEXTAREA'].includes(e.target.tagName)) return;
@@ -123,13 +127,94 @@ export default function PinDetailModal({
         } else {
           onClose();
         }
-      } else if (e.key === 'b' || e.key === 'B') {
+      } else if (e.key.toLowerCase() === 'g') {
         setIsGrayscale(prev => !prev);
+      } else if (e.key.toLowerCase() === 'r') {
+        setShowRuleOfThirds(prev => !prev);
+      } else if (e.key.toLowerCase() === 'c') {
+        if (extractedColors.length > 0) {
+          handleCopyColorHex(extractedColors[0]);
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onClose, isFocusMode]);
+  }, [onClose, isFocusMode, extractedColors]);
+
+  // Generate Adobe Swatch Exchange (.ase) Blob
+  const generateASEBlob = (hexColors) => {
+    const blocks = hexColors.map((hex, i) => {
+      const r = parseInt(hex.slice(1, 3), 16) / 255;
+      const g = parseInt(hex.slice(3, 5), 16) / 255;
+      const b = parseInt(hex.slice(5, 7), 16) / 255;
+      const name = `Color ${i + 1}`;
+      return { r, g, b, name };
+    });
+
+    const bufferSize = 12 + blocks.reduce((acc, b) => acc + 6 + (b.name.length + 1) * 2 + 20, 0);
+    const buffer = new ArrayBuffer(bufferSize);
+    const view = new DataView(buffer);
+    
+    let offset = 0;
+    view.setUint8(offset++, 'A'.charCodeAt(0));
+    view.setUint8(offset++, 'S'.charCodeAt(0));
+    view.setUint8(offset++, 'E'.charCodeAt(0));
+    view.setUint8(offset++, 'F'.charCodeAt(0));
+    
+    view.setUint16(offset, 1); offset += 2;
+    view.setUint16(offset, 0); offset += 2;
+    view.setUint32(offset, blocks.length); offset += 4;
+    
+    blocks.forEach(c => {
+      view.setUint16(offset, 1); offset += 2; 
+      const blockLength = (c.name.length + 1) * 2 + 20;
+      view.setUint32(offset, blockLength); offset += 4; 
+      
+      view.setUint16(offset, c.name.length + 1); offset += 2;
+      for (let i = 0; i < c.name.length; i++) {
+        view.setUint16(offset, c.name.charCodeAt(i)); offset += 2;
+      }
+      view.setUint16(offset, 0); offset += 2; 
+      
+      view.setUint8(offset++, 'R'.charCodeAt(0));
+      view.setUint8(offset++, 'G'.charCodeAt(0));
+      view.setUint8(offset++, 'B'.charCodeAt(0));
+      view.setUint8(offset++, ' '.charCodeAt(0));
+      
+      view.setFloat32(offset, c.r); offset += 4;
+      view.setFloat32(offset, c.g); offset += 4;
+      view.setFloat32(offset, c.b); offset += 4;
+      
+      view.setUint16(offset, 2); offset += 2;
+    });
+    
+    return new Blob([buffer], { type: 'application/octet-stream' });
+  };
+
+  const handleDownloadASE = () => {
+    if (!extractedColors.length) return;
+    const blob = generateASEBlob(extractedColors);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `layouthub-${pin.id}.ase`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    setColorToast('Archivo .ase descargado!');
+    setTimeout(() => setColorToast(''), 2200);
+  };
+
+  const handleCopyCSSVars = () => {
+    if (!extractedColors.length) return;
+    const cssVars = `:root {\n${extractedColors.map((hex, i) => `  --color-${i + 1}: ${hex};`).join('\n')}\n}`;
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(cssVars);
+      setColorToast('Variables CSS copiadas!');
+      setTimeout(() => setColorToast(''), 2200);
+    }
+  };
 
   // Color Extraction from Image Canvas
   const handleExtractColors = () => {
@@ -398,10 +483,24 @@ export default function PinDetailModal({
                     ? 'bg-neutral-100 text-neutral-900 shadow-md font-black' 
                     : 'text-neutral-300 hover:bg-neutral-800 hover:text-white'
                 }`}
-                title="Monocromo B&N (Atajo: B) - Verificar jerarquía visual y luminancia"
+                title="Monocromo B&N (Atajo: G) - Verificar jerarquía visual"
               >
                 <Contrast className="w-4 h-4" />
-                <span className="hidden sm:inline">B&N (B)</span>
+                <span className="hidden sm:inline">B&N (G)</span>
+              </button>
+
+              {/* Composition Overlay: Rule of Thirds Toggle */}
+              <button
+                onClick={() => setShowRuleOfThirds(prev => !prev)}
+                className={`p-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                  showRuleOfThirds 
+                    ? 'bg-indigo-500 text-white shadow-md font-black' 
+                    : 'text-neutral-300 hover:bg-neutral-800 hover:text-white'
+                }`}
+                title="Regla de los Tercios (Atajo: R) - Grid de Composición"
+              >
+                <LayoutGrid className="w-4 h-4" />
+                <span className="hidden sm:inline">Grid (R)</span>
               </button>
 
               {/* Focus Mode */}
@@ -422,12 +521,20 @@ export default function PinDetailModal({
               <button
                 onClick={handleCopyDirectLink}
                 className="p-2 rounded-xl text-xs font-bold text-neutral-200 hover:bg-neutral-800 hover:text-white transition-all flex items-center gap-1.5"
-                title="Copiar URL directa de imagen (pegar en Figma, Illustrator o Photoshop)"
+                title="Copiar URL directa de imagen"
               >
                 <Copy className="w-4 h-4 text-blue-400" />
                 <span className="hidden sm:inline">Copiar URL</span>
               </button>
             </div>
+
+            {/* Floating Aspect Ratio Badge */}
+            {pin.aspectRatio && (
+              <div className="absolute top-4 right-4 z-30 px-3 py-1.5 rounded-xl bg-neutral-950/90 backdrop-blur-md border border-neutral-800 text-neutral-400 font-mono text-[10px] tracking-widest uppercase flex items-center gap-1.5 shadow-xl">
+                <span>Relación:</span>
+                <span className="font-bold text-white">{pin.aspectRatio.replace('aspect-', '').replace(/[\[\]]/g, '')}</span>
+              </div>
+            )}
 
             {/* Extracted Color Palette Overlay */}
             {extractedColors.length > 0 && (
@@ -439,9 +546,26 @@ export default function PinDetailModal({
                     onClick={() => handleCopyColorHex(hex)}
                     style={{ backgroundColor: hex }}
                     className="w-7 h-7 rounded-xl border border-white/20 shadow-sm transition-transform hover:scale-125 focus:outline-none flex items-center justify-center group"
-                    title={`Copiar HEX: ${hex}`}
+                    title={`Copiar HEX: ${hex} (Atajo: C para el primero)`}
                   />
                 ))}
+                
+                {/* Export Palette Actions */}
+                <div className="h-6 w-px bg-neutral-800 mx-1"></div>
+                <button
+                  onClick={handleCopyCSSVars}
+                  className="p-1.5 hover:bg-neutral-800 text-neutral-400 hover:text-white rounded-lg transition-colors"
+                  title="Copiar Variables CSS"
+                >
+                  <Code className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={handleDownloadASE}
+                  className="p-1.5 hover:bg-neutral-800 text-neutral-400 hover:text-white rounded-lg transition-colors"
+                  title="Descargar paleta (.ase) para Adobe"
+                >
+                  <Download className="w-4 h-4" />
+                </button>
               </div>
             )}
 
@@ -455,37 +579,50 @@ export default function PinDetailModal({
 
             {/* Color Hex Toast */}
             {colorToast && (
-              <div className="absolute bottom-16 left-4 z-40 bg-emerald-600 text-white text-xs font-bold px-3.5 py-2 rounded-xl shadow-lg animate-fadeIn flex items-center gap-1.5">
+              <div className="absolute bottom-20 left-4 z-40 bg-emerald-600 text-white text-xs font-bold px-3.5 py-2 rounded-xl shadow-lg animate-fadeIn flex items-center gap-1.5">
                 <Check className="w-3.5 h-3.5 stroke-[3]" />
                 <span>{colorToast}</span>
               </div>
             )}
 
             {/* Media Canvas Element */}
-            {pin.type === 'video' ? (
-              <video
-                src={pin.mediaUrl}
-                poster={pin.thumbnail}
-                controls
-                autoPlay
-                loop
-                playsInline
-                className={`max-h-[82vh] w-full object-contain rounded-2xl transition-all duration-300 ${
-                  isGrayscale ? 'grayscale contrast-125' : ''
-                }`}
-              />
-            ) : (
-              <img
-                ref={imageRef}
-                src={pin.mediaUrl}
-                alt={pin.title}
-                crossOrigin="anonymous"
-                className={`max-h-[82vh] w-full object-contain rounded-2xl transition-all duration-300 drop-shadow-md ${
-                  isGrayscale ? 'grayscale contrast-125' : ''
-                }`}
-              />
-            )}
-          </div>
+            <div className="relative inline-block">
+              {pin.type === 'video' ? (
+                <video
+                  src={pin.mediaUrl}
+                  poster={pin.thumbnail}
+                  controls
+                  autoPlay
+                  loop
+                  playsInline
+                  className={`max-h-[82vh] w-auto object-contain rounded-2xl transition-all duration-300 relative z-10 ${
+                    isGrayscale ? 'grayscale contrast-125' : ''
+                  }`}
+                />
+              ) : (
+                <img
+                  ref={imageRef}
+                  src={pin.mediaUrl}
+                  alt={pin.title}
+                  crossOrigin="anonymous"
+                  className={`max-h-[82vh] w-auto object-contain rounded-2xl transition-all duration-300 drop-shadow-md relative z-10 ${
+                    isGrayscale ? 'grayscale contrast-125' : ''
+                  }`}
+                />
+              )}
+              
+              {/* Composition Overlay: Rule of Thirds SVG */}
+              {showRuleOfThirds && (
+                <div className="absolute inset-0 z-20 pointer-events-none rounded-2xl overflow-hidden border-2 border-white/40">
+                  <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+                    <line x1="33.33%" y1="0" x2="33.33%" y2="100%" stroke="rgba(255,255,255,0.6)" strokeWidth="1" strokeDasharray="4 4" />
+                    <line x1="66.66%" y1="0" x2="66.66%" y2="100%" stroke="rgba(255,255,255,0.6)" strokeWidth="1" strokeDasharray="4 4" />
+                    <line x1="0" y1="33.33%" x2="100%" y2="33.33%" stroke="rgba(255,255,255,0.6)" strokeWidth="1" strokeDasharray="4 4" />
+                    <line x1="0" y1="66.66%" x2="100%" y2="66.66%" stroke="rgba(255,255,255,0.6)" strokeWidth="1" strokeDasharray="4 4" />
+                  </svg>
+                </div>
+              )}
+            </div>
 
           {/* Right Column: Moodboards & Details */}
           {!isFocusMode && (
