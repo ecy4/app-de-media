@@ -484,7 +484,7 @@ function AppContent() {
 
       {/* Floating Toast Notification */}
       {toastMessage && (
-        <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-50 text-white px-5 py-3 rounded-full text-xs sm:text-sm font-semibold shadow-2xl flex items-center gap-2 animate-fadeIn border ${
+        <div className={`fixed top-6 right-6 z-50 text-white px-5 py-3 rounded-xl text-xs sm:text-sm font-semibold shadow-2xl flex items-center gap-2 animate-fadeIn border ${
           toastMessage.isError ? 'bg-red-700 border-red-500' : 'bg-[#111111] border-white/10'
         }`}>
           {toastMessage.isError ? (

@@ -107,6 +107,16 @@ export function AuthProvider({ children }) {
     return data;
   };
 
+  // 4.5 Resend Confirmation Email
+  const resendConfirmation = async (email) => {
+    if (!supabase) throw new Error('Supabase no está conectado.');
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email,
+    });
+    if (error) throw error;
+  };
+
   // 5. Logout
   const logout = async () => {
     if (supabase) {
@@ -164,6 +174,7 @@ export function AuthProvider({ children }) {
     isSupabaseConfigured,
     login,
     signup,
+    resendConfirmation,
     logout,
     updateProfile: updateProfileData,
     recheckHealth: async () => {
