@@ -27,7 +27,7 @@ export default function CategoryBar({ selectedCategory, onSelectCategory }) {
         {/* Scrollable Container */}
         <div
           ref={scrollRef}
-          className="flex items-center gap-2.5 overflow-x-auto no-scrollbar py-1 scroll-smooth w-full"
+          className="flex items-center gap-2 overflow-x-auto no-scrollbar py-2 scroll-smooth w-full"
         >
           {CATEGORIES.map((cat) => {
             const isSelected = selectedCategory === cat.id;
@@ -35,10 +35,10 @@ export default function CategoryBar({ selectedCategory, onSelectCategory }) {
               <button
                 key={cat.id}
                 onClick={() => onSelectCategory(cat.id)}
-                className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-semibold transition-all duration-150 shrink-0 ${
+                className={`whitespace-nowrap px-4 py-2 rounded-full text-xs sm:text-sm font-bold transition-all duration-200 shrink-0 ${
                   isSelected
-                    ? 'bg-[#111111] text-white shadow-sm scale-[1.02]'
-                    : 'bg-[#efefef] text-[#111111] hover:bg-[#e2e2e2] active:scale-95'
+                    ? 'bg-neutral-900 text-white shadow-md shadow-neutral-900/20 scale-[1.02]'
+                    : 'bg-gray-100/80 text-gray-700 hover:bg-gray-200/70 hover:text-black active:scale-95'
                 }`}
               >
                 {cat.label}

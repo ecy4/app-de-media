@@ -208,53 +208,62 @@ export default function Navbar({
             <div className="relative" ref={menuRef}>
               <button
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
-                className="flex items-center gap-1 p-1 hover:bg-gray-100 rounded-full transition-colors focus:outline-none"
+                className="flex items-center gap-2 p-1 pl-1.5 pr-2.5 hover:bg-gray-100/80 rounded-full transition-all focus:outline-none border border-transparent hover:border-gray-200 active:scale-95"
               >
-                <img
-                  src={userAvatar}
-                  alt={userFullName}
-                  className="w-8 h-8 rounded-full object-cover ring-2 ring-transparent hover:ring-red-300 transition-all"
-                />
-                <ChevronDown className="w-3.5 h-3.5 text-gray-600 hidden sm:block" />
+                <div className="relative">
+                  <img
+                    src={userAvatar}
+                    alt={userFullName}
+                    className="w-8 h-8 rounded-full object-cover ring-2 ring-white shadow-sm"
+                  />
+                  <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 border-2 border-white rounded-full" />
+                </div>
+                <div className="hidden sm:flex flex-col text-left">
+                  <span className="text-xs font-bold text-gray-800 leading-tight truncate max-w-[100px]">{userFullName}</span>
+                </div>
+                <ChevronDown className={`w-3.5 h-3.5 text-gray-500 transition-transform duration-200 ${isMenuOpen ? 'rotate-180' : ''}`} />
               </button>
 
-              {/* Dropdown Menu */}
+              {/* Modern Glassmorphic Dropdown Menu */}
               {isMenuOpen && (
-                <div className="absolute right-0 mt-2 w-64 bg-white rounded-3xl shadow-2xl border border-gray-100 py-2 z-50 animate-fadeIn">
-                  <div className="px-4 py-3 border-b border-gray-100">
-                    <div className="flex items-center justify-between">
-                      <p className="text-xs text-gray-400 font-semibold">Cuenta Supabase</p>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${
-                        userRole === 'admin' ? 'bg-red-50 text-red-600' : 'bg-gray-100 text-gray-700'
-                      }`}>
-                        {userRole}
-                      </span>
+                <div className="absolute right-0 mt-3 w-72 bg-white/95 backdrop-blur-2xl rounded-3xl shadow-[0_15px_40px_-5px_rgba(0,0,0,0.15)] border border-gray-100 p-2 z-50 animate-fadeIn">
+                  {/* User Profile Header Card */}
+                  <div className="p-3 bg-gradient-to-br from-gray-50 to-gray-100/60 rounded-2xl mb-2 border border-gray-100">
+                    <div className="flex items-center gap-3">
+                      <img
+                        src={userAvatar}
+                        alt={userFullName}
+                        className="w-11 h-11 rounded-full object-cover ring-2 ring-white shadow-sm"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-sm font-black text-gray-900 truncate">{userFullName}</p>
+                          {userRole === 'admin' && (
+                            <span className="bg-red-600 text-white text-[9px] font-black px-1.5 py-0.2 rounded-full uppercase">
+                              Admin
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-gray-400 font-medium truncate">@{userHandle}</p>
+                      </div>
                     </div>
-                    <p className="text-sm font-bold text-gray-900 truncate mt-0.5">{userFullName}</p>
-                    <p className="text-xs text-gray-500 truncate">@{userHandle}</p>
                   </div>
 
-                  <div className="py-1">
+                  <div className="space-y-0.5">
                     <button
                       onClick={() => {
                         setActiveView('profile');
                         setIsMenuOpen(false);
                       }}
-                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2.5 font-medium"
+                      className="w-full text-left px-3.5 py-2.5 text-xs text-gray-700 hover:text-black hover:bg-gray-100/80 rounded-2xl flex items-center justify-between font-bold transition-all group"
                     >
-                      <User className="w-4 h-4 text-gray-500" />
-                      <span>Ver tu Perfil</span>
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        setActiveView('explore');
-                        setIsMenuOpen(false);
-                      }}
-                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2.5 font-medium lg:hidden"
-                    >
-                      <Compass className="w-4 h-4 text-gray-500" />
-                      <span>Explorar Tendencias</span>
+                      <div className="flex items-center gap-2.5">
+                        <div className="p-1.5 rounded-xl bg-gray-100 group-hover:bg-white transition-colors">
+                          <User className="w-4 h-4 text-gray-600" />
+                        </div>
+                        <span>Mi Perfil</span>
+                      </div>
+                      <span className="text-[10px] text-gray-400 font-medium group-hover:text-gray-600">Ver pines</span>
                     </button>
 
                     <button
@@ -262,36 +271,61 @@ export default function Navbar({
                         setIsMenuOpen(false);
                         onOpenCreatePin();
                       }}
-                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2.5 font-medium"
+                      className="w-full text-left px-3.5 py-2.5 text-xs text-gray-700 hover:text-black hover:bg-gray-100/80 rounded-2xl flex items-center justify-between font-bold transition-all group"
                     >
-                      <Plus className="w-4 h-4 text-[#E60023]" />
-                      <span>Crear nuevo Pin</span>
+                      <div className="flex items-center gap-2.5">
+                        <div className="p-1.5 rounded-xl bg-red-50 text-[#E60023]">
+                          <Plus className="w-4 h-4" />
+                        </div>
+                        <span>Crear nuevo Pin</span>
+                      </div>
+                      <span className="text-[10px] bg-red-50 text-[#E60023] px-2 py-0.5 rounded-full font-bold">+ Subir</span>
                     </button>
 
-                    {/* Admin Dashboard (Only visible for real admins) */}
+                    <button
+                      onClick={() => {
+                        setActiveView('explore');
+                        setIsMenuOpen(false);
+                      }}
+                      className="w-full text-left px-3.5 py-2.5 text-xs text-gray-700 hover:text-black hover:bg-gray-100/80 rounded-2xl flex items-center gap-2.5 font-bold transition-all group lg:hidden"
+                    >
+                      <div className="p-1.5 rounded-xl bg-gray-100 group-hover:bg-white transition-colors">
+                        <Compass className="w-4 h-4 text-gray-600" />
+                      </div>
+                      <span>Explorar Colecciones</span>
+                    </button>
+
+                    {/* Admin Dashboard */}
                     {userRole === 'admin' && (
                       <button
                         onClick={() => {
                           setActiveView('admin');
                           setIsMenuOpen(false);
                         }}
-                        className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2.5 font-bold"
+                        className="w-full text-left px-3.5 py-2.5 text-xs text-red-600 hover:bg-red-50/80 rounded-2xl flex items-center justify-between font-bold transition-all"
                       >
-                        <ShieldCheck className="w-4 h-4" />
-                        <span>Panel Admin</span>
+                        <div className="flex items-center gap-2.5">
+                          <div className="p-1.5 rounded-xl bg-red-100 text-red-600">
+                            <ShieldCheck className="w-4 h-4" />
+                          </div>
+                          <span>Panel de Moderación</span>
+                        </div>
+                        <span className="text-[9px] bg-red-600 text-white px-2 py-0.5 rounded-full font-black">PRO</span>
                       </button>
                     )}
                   </div>
 
-                  <div className="pt-1 border-t border-gray-100">
+                  <div className="pt-1.5 mt-1 border-t border-gray-100">
                     <button
                       onClick={() => {
                         logout();
                         setIsMenuOpen(false);
                       }}
-                      className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2.5 font-semibold"
+                      className="w-full text-left px-3.5 py-2.5 text-xs text-rose-600 hover:bg-rose-50 rounded-2xl flex items-center gap-2.5 font-bold transition-all"
                     >
-                      <LogOut className="w-4 h-4" />
+                      <div className="p-1.5 rounded-xl bg-rose-50 text-rose-600">
+                        <LogOut className="w-4 h-4" />
+                      </div>
                       <span>Cerrar sesión</span>
                     </button>
                   </div>

@@ -169,12 +169,15 @@ export default function CreatePinModal({ isOpen, onClose, onPinCreated }) {
 
       <div className="relative z-10 w-full max-w-4xl bg-white rounded-3xl shadow-2xl overflow-hidden my-auto">
         {/* Top Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-          <div className="flex items-center gap-2">
-            <h2 className="text-lg sm:text-xl font-bold text-gray-900">Crear un Pin</h2>
-            <span className="text-xs bg-red-50 text-[#E60023] font-semibold px-2.5 py-0.5 rounded-full">
-              Subida Segura
-            </span>
+        <div className="flex items-center justify-between px-6 py-4.5 border-b border-gray-100/80 bg-gray-50/50">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-full bg-red-50 text-[#E60023] flex items-center justify-center font-bold">
+              <UploadCloud className="w-4 h-4" />
+            </div>
+            <div>
+              <h2 className="text-base sm:text-lg font-black text-gray-900 leading-tight">Publicar un nuevo Pin</h2>
+              <p className="text-[11px] text-gray-400 font-medium">Sube fotos o videos a Supabase Storage</p>
+            </div>
           </div>
           <button
             onClick={onClose}
@@ -186,7 +189,7 @@ export default function CreatePinModal({ isOpen, onClose, onPinCreated }) {
 
         {/* Error Banner */}
         {errorMessage && (
-          <div className="mx-6 mt-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-xl text-xs flex items-center justify-between">
+          <div className="mx-6 mt-4 p-3.5 bg-red-50 border border-red-200 text-red-700 rounded-2xl text-xs flex items-center justify-between font-medium">
             <span>{errorMessage}</span>
             <button onClick={() => setErrorMessage(null)}>
               <X className="w-4 h-4" />
@@ -195,7 +198,7 @@ export default function CreatePinModal({ isOpen, onClose, onPinCreated }) {
         )}
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-6 grid grid-cols-1 md:grid-cols-12 gap-6">
+        <form onSubmit={handleSubmit} className="p-6 grid grid-cols-1 md:grid-cols-12 gap-8">
           {/* Left Column: Media Uploader */}
           <div className="md:col-span-5 flex flex-col">
             <input
@@ -212,33 +215,33 @@ export default function CreatePinModal({ isOpen, onClose, onPinCreated }) {
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
-                className={`flex-1 min-h-[320px] rounded-2xl border-2 border-dashed flex flex-col items-center justify-center p-6 text-center cursor-pointer transition-all ${
+                className={`flex-1 min-h-[350px] rounded-3xl border-2 border-dashed flex flex-col items-center justify-center p-6 text-center cursor-pointer transition-all ${
                   isDragging
-                    ? 'border-[#E60023] bg-red-50/50 scale-[0.99]'
-                    : 'border-gray-300 hover:border-gray-400 bg-gray-50/80 hover:bg-gray-100'
+                    ? 'border-[#E60023] bg-red-50/60 scale-[0.99]'
+                    : 'border-gray-200 hover:border-gray-300 bg-gray-50/60 hover:bg-gray-100/70 shadow-inner'
                 }`}
               >
-                <div className="w-14 h-14 rounded-full bg-white shadow-sm flex items-center justify-center text-[#E60023] mb-3">
-                  <UploadCloud className="w-7 h-7" />
+                <div className="w-16 h-16 rounded-2xl bg-white shadow-md flex items-center justify-center text-[#E60023] mb-3 transform hover:scale-105 transition-transform">
+                  <UploadCloud className="w-8 h-8" />
                 </div>
-                <p className="font-bold text-sm text-gray-800">
+                <p className="font-black text-sm text-gray-800">
                   Arrastra o haz clic para subir
                 </p>
-                <p className="text-xs text-gray-500 mt-1 max-w-[200px]">
-                  Imágenes (JPG, PNG, WebP) hasta 10 MB o Videos (MP4, WebM) hasta 50 MB.
+                <p className="text-xs text-gray-500 mt-1 max-w-[210px] leading-relaxed">
+                  Imágenes hasta 10 MB o Videos de alta calidad hasta 50 MB.
                 </p>
-                <div className="mt-4 flex items-center gap-3 text-xs text-gray-400">
-                  <span className="flex items-center gap-1">
-                    <ImageIcon className="w-3.5 h-3.5" /> Fotos
+                <div className="mt-5 flex items-center gap-2 text-[11px] text-gray-500 font-semibold bg-white/80 px-3 py-1.5 rounded-full border border-gray-100 shadow-sm">
+                  <span className="flex items-center gap-1 text-[#E60023]">
+                    <ImageIcon className="w-3.5 h-3.5" /> JPG, PNG
                   </span>
                   <span>•</span>
-                  <span className="flex items-center gap-1">
-                    <Video className="w-3.5 h-3.5" /> Videos
+                  <span className="flex items-center gap-1 text-purple-600">
+                    <Video className="w-3.5 h-3.5" /> MP4, WebM
                   </span>
                 </div>
               </div>
             ) : (
-              <div className="relative rounded-2xl overflow-hidden bg-black flex items-center justify-center min-h-[320px] max-h-[420px] group">
+              <div className="relative rounded-3xl overflow-hidden bg-black flex items-center justify-center min-h-[350px] max-h-[440px] shadow-lg group">
                 {mediaType === 'video' ? (
                   <video
                     src={previewUrl}
@@ -246,13 +249,13 @@ export default function CreatePinModal({ isOpen, onClose, onPinCreated }) {
                     autoPlay
                     muted
                     loop
-                    className="w-full h-full max-h-[420px] object-contain rounded-2xl"
+                    className="w-full h-full max-h-[440px] object-contain rounded-3xl"
                   />
                 ) : (
                   <img
                     src={previewUrl}
                     alt="Vista previa"
-                    className="w-full h-full max-h-[420px] object-contain rounded-2xl"
+                    className="w-full h-full max-h-[440px] object-contain rounded-3xl"
                   />
                 )}
 
@@ -274,44 +277,44 @@ export default function CreatePinModal({ isOpen, onClose, onPinCreated }) {
             <div className="space-y-4">
               {/* Title */}
               <div>
-                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
-                  Título del Pin *
+                <label className="block text-[11px] font-black text-gray-500 uppercase tracking-wider mb-1.5">
+                  Título del Pin <span className="text-[#E60023]">*</span>
                 </label>
                 <input
                   type="text"
                   required
                   maxLength={100}
-                  placeholder="Añade un título descriptivo..."
+                  placeholder="Dale un título llamativo a tu idea..."
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  className="w-full px-4 py-2.5 text-base sm:text-lg font-bold bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-red-400"
+                  className="w-full px-4 py-3 text-base sm:text-lg font-bold bg-gray-50/70 border border-gray-200 rounded-2xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-[#E60023] transition-all shadow-sm"
                 />
               </div>
 
               {/* Description */}
               <div>
-                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
+                <label className="block text-[11px] font-black text-gray-500 uppercase tracking-wider mb-1.5">
                   Descripción
                 </label>
                 <textarea
                   rows={3}
                   maxLength={500}
-                  placeholder="Explica de qué trata este Pin..."
+                  placeholder="Cuenta la historia detrás de este pin o comparte detalles..."
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  className="w-full px-4 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-red-400 resize-none"
+                  className="w-full px-4 py-3 text-xs sm:text-sm bg-gray-50/70 border border-gray-200 rounded-2xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-[#E60023] transition-all resize-none shadow-sm"
                 />
               </div>
 
               {/* Category Dropdown */}
               <div>
-                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
+                <label className="block text-[11px] font-black text-gray-500 uppercase tracking-wider mb-1.5">
                   Categoría
                 </label>
                 <select
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
-                  className="w-full px-4 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-red-400 cursor-pointer font-medium"
+                  className="w-full px-4 py-3 text-xs sm:text-sm bg-gray-50/70 border border-gray-200 rounded-2xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-[#E60023] cursor-pointer font-bold text-gray-800 transition-all shadow-sm"
                 >
                   {CATEGORIES.filter((c) => c.id !== 'all').map((cat) => (
                     <option key={cat.id} value={cat.id}>
@@ -323,34 +326,34 @@ export default function CreatePinModal({ isOpen, onClose, onPinCreated }) {
 
               {/* Destination Link */}
               <div>
-                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
-                  Enlace de destino (ej. https://tuweb.com)
+                <label className="block text-[11px] font-black text-gray-500 uppercase tracking-wider mb-1.5">
+                  Enlace de destino (opcional)
                 </label>
                 <div className="relative">
-                  <LinkIcon className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
+                  <LinkIcon className="w-4 h-4 text-gray-400 absolute left-3.5 top-3.5" />
                   <input
                     type="url"
-                    placeholder="https://ejemplo.com"
+                    placeholder="https://tuportafolio.com"
                     value={destinationUrl}
                     onChange={(e) => setDestinationUrl(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-200"
+                    className="w-full pl-10 pr-4 py-2.5 text-xs sm:text-sm bg-gray-50/70 border border-gray-200 rounded-2xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-[#E60023] transition-all shadow-sm"
                   />
                 </div>
               </div>
 
               {/* Tags */}
               <div>
-                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
-                  Etiquetas (separadas por coma)
+                <label className="block text-[11px] font-black text-gray-500 uppercase tracking-wider mb-1.5">
+                  Etiquetas (separadas por comas)
                 </label>
                 <div className="relative">
-                  <Tag className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
+                  <Tag className="w-4 h-4 text-gray-400 absolute left-3.5 top-3.5" />
                   <input
                     type="text"
-                    placeholder="fotografia, diseno, arquitectura..."
+                    placeholder="fotografia, retrato, cinemático..."
                     value={tagsInput}
                     onChange={(e) => setTagsInput(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-200"
+                    className="w-full pl-10 pr-4 py-2.5 text-xs sm:text-sm bg-gray-50/70 border border-gray-200 rounded-2xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-200 focus:border-[#E60023] transition-all shadow-sm"
                   />
                 </div>
               </div>
@@ -362,19 +365,19 @@ export default function CreatePinModal({ isOpen, onClose, onPinCreated }) {
                 type="button"
                 onClick={onClose}
                 disabled={isSubmitting}
-                className="px-5 py-2.5 rounded-full font-bold text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                className="px-5 py-2.5 rounded-full font-bold text-xs sm:text-sm text-gray-700 hover:bg-gray-100 transition-colors"
               >
                 Cancelar
               </button>
               <button
                 type="submit"
                 disabled={isSubmitting || (!file && !previewUrl)}
-                className="px-6 py-2.5 bg-[#E60023] hover:bg-[#ad081b] disabled:opacity-40 disabled:hover:bg-[#E60023] text-white rounded-full font-bold text-sm shadow-md transition-all flex items-center gap-2 active:scale-95"
+                className="px-7 py-3 bg-[#E60023] hover:bg-[#ad081b] disabled:opacity-40 disabled:hover:bg-[#E60023] text-white rounded-full font-bold text-xs sm:text-sm shadow-md shadow-red-600/30 transition-all flex items-center gap-2 active:scale-95"
               >
                 {isSubmitting ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Publicando de forma segura...</span>
+                    <span>Guardando en Storage...</span>
                   </>
                 ) : (
                   'Publicar Pin'
