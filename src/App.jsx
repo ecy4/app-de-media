@@ -98,14 +98,21 @@ function AppContent() {
     return () => clearInterval(interval);
   }, [user?.id, healthStatus.connected]);
 
-  // 3. Fetch Dynamic Media from API (60 for Home, 100 for Explore)
+  const [explorePage, setExplorePage] = useState(1);
+  const [hasMoreExplore, setHasMoreExplore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+
+  // 3. Fetch Dynamic Media from API (60 for Home, Initial 60 for Explore)
   const loadLiveMedia = useCallback(async (cat, q, view) => {
     setIsLoadingMedia(true);
-    const count = view === 'explore' ? 100 : 60;
+    setExplorePage(1);
+    setHasMoreExplore(true);
+    const count = 60;
     try {
       const fetched = await fetchFeedMedia({ 
         category: cat, 
         query: q, 
+        page: 1,
         perPage: count 
       });
       setApiPins(fetched || []);
@@ -116,6 +123,36 @@ function AppContent() {
       setIsLoadingMedia(false);
     }
   }, []);
+
+  // Infinite Scroll Handler for Explore View
+  const handleLoadMoreExplore = useCallback(async () => {
+    if (loadingMore || !hasMoreExplore || activeView !== 'explore') return;
+    setLoadingMore(true);
+    const nextPage = explorePage + 1;
+    try {
+      const moreItems = await fetchFeedMedia({
+        category: selectedCategory,
+        query: searchQuery,
+        page: nextPage,
+        perPage: 50
+      });
+
+      if (!moreItems || moreItems.length === 0) {
+        setHasMoreExplore(false);
+      } else {
+        setApiPins(prev => {
+          const existingIds = new Set(prev.map(p => p.id));
+          const uniqueNew = moreItems.filter(p => !existingIds.has(p.id));
+          return [...prev, ...uniqueNew];
+        });
+        setExplorePage(nextPage);
+      }
+    } catch (err) {
+      console.error('Error loading more explore items:', err);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [loadingMore, hasMoreExplore, activeView, explorePage, selectedCategory, searchQuery]);
 
   useEffect(() => {
     loadLiveMedia(selectedCategory, searchQuery, activeView);
@@ -473,6 +510,9 @@ function AppContent() {
           onShare={handleShare}
           onAuthorClick={handleOpenCreatorProfile}
           onOpenCreatePin={handleOpenCreatePin}
+          onLoadMore={handleLoadMoreExplore}
+          hasMore={hasMoreExplore}
+          isLoadingMore={loadingMore}
           onSelectCategory={(cat) => {
             setSelectedCategory(cat);
             navigateTo('home', { category: cat });

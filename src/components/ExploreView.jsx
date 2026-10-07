@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Sparkles, 
   Flame, 
   Image as ImageIcon, 
   Video, 
   Layers, 
-  TrendingUp 
+  TrendingUp,
+  Loader2
 } from 'lucide-react';
 import MasonryGrid from './MasonryGrid';
 import { FEATURED_TRENDS } from '../constants/categories';
@@ -18,9 +19,34 @@ export default function ExploreView({
   onShare, 
   onSelectCategory,
   onAuthorClick,
-  onOpenCreatePin 
+  onOpenCreatePin,
+  onLoadMore,
+  hasMore = true,
+  isLoadingMore = false
 }) {
   const [mediaTypeFilter, setMediaTypeFilter] = useState('all'); // 'all' | 'image' | 'video'
+  const observerTargetRef = useRef(null);
+
+  // Setup infinite scroll IntersectionObserver
+  useEffect(() => {
+    if (!onLoadMore || !hasMore) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && !isLoadingMore) {
+          onLoadMore();
+        }
+      },
+      { rootMargin: '350px' }
+    );
+
+    const currentEl = observerTargetRef.current;
+    if (currentEl) observer.observe(currentEl);
+
+    return () => {
+      if (currentEl) observer.unobserve(currentEl);
+    };
+  }, [onLoadMore, hasMore, isLoadingMore]);
 
   const filteredPins = pins.filter((p) => {
     if (mediaTypeFilter === 'all') return true;
@@ -134,6 +160,21 @@ export default function ExploreView({
         onResetFilters={() => setMediaTypeFilter('all')}
         onOpenCreatePin={onOpenCreatePin}
       />
+
+      {/* Infinite Scroll Sentinel and Status Indicator */}
+      <div ref={observerTargetRef} className="py-10 flex flex-col items-center justify-center">
+        {isLoadingMore && (
+          <div className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-white shadow-md border border-gray-100 text-xs font-bold text-gray-700 animate-fadeIn">
+            <Loader2 className="w-4 h-4 text-[#E60023] animate-spin" />
+            <span>Cargando más inspiración desde Pixabay...</span>
+          </div>
+        )}
+        {!hasMore && pins.length > 50 && (
+          <p className="text-xs text-gray-400 font-semibold mt-4">
+            Has llegado al final de las tendencias de hoy ✨
+          </p>
+        )}
+      </div>
     </div>
   );
 }
