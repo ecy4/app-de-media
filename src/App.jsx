@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Navbar from './components/Navbar';
-import CategoryBar from './components/CategoryBar';
+
 import FeaturedCarousel from './components/FeaturedCarousel';
 import MasonryGrid from './components/MasonryGrid';
 import PinDetailModal from './components/PinDetailModal';
@@ -528,19 +528,6 @@ function AppContent() {
         />
       ) : (
         <>
-          {/* Categories & Orientation Bar */}
-          <CategoryBar
-            selectedCategory={selectedCategory}
-            onSelectCategory={(cat) => {
-              setSelectedCategory(cat);
-              navigateTo('home', { category: cat });
-            }}
-            selectedOrientation={selectedOrientation}
-            onSelectOrientation={(ori) => {
-              setSelectedOrientation(ori);
-            }}
-          />
-
           {/* Featured Trends Carousel */}
           {selectedCategory === 'all' && !searchQuery && (
             <FeaturedCarousel
