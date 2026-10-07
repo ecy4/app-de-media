@@ -20,7 +20,10 @@ import {
   fetchUserSavedPinIds, 
   togglePinSaveInDb, 
   addCommentToSupabase,
-  isSupabaseConfigured 
+  isSupabaseConfigured,
+  fetchUserNotifications,
+  markNotificationsAsReadInDb,
+  deleteNotificationInDb
 } from './lib/supabaseClient';
 import { Check, Loader2, AlertCircle } from 'lucide-react';
 
@@ -63,19 +66,22 @@ function AppContent() {
     loadDatabasePins();
   }, [loadDatabasePins]);
 
-  // 2. Fetch User Likes & Saves from Supabase
+  // 2. Fetch User Likes, Saves & Notifications from Supabase
   useEffect(() => {
     async function loadUserInteractions() {
       if (user?.id && healthStatus.connected) {
-        const [saved, liked] = await Promise.all([
+        const [saved, liked, notifs] = await Promise.all([
           fetchUserSavedPinIds(user.id),
-          fetchUserLikedPinIds(user.id)
+          fetchUserLikedPinIds(user.id),
+          fetchUserNotifications(user.id)
         ]);
         setSavedPinIds(saved);
         setLikedPinIds(liked);
+        setNotifications(notifs);
       } else {
         setSavedPinIds([]);
         setLikedPinIds([]);
+        setNotifications([]);
       }
     }
     loadUserInteractions();
@@ -351,14 +357,20 @@ function AppContent() {
         onOpenAuth={handleOpenAuth}
         onOpenCreatePin={handleOpenCreatePin}
         notifications={notifications}
-        onMarkAllNotificationsRead={() => setNotifications(prev => prev.map(n => ({ ...n, read: true })))}
+        onMarkAllNotificationsRead={() => {
+          setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+          if (user) markNotificationsAsReadInDb(user.id);
+        }}
         onNotificationClick={(n) => {
           if (n.pin_id) {
             const target = allPins.find(p => p.id === n.pin_id);
             if (target) openPinDetail(target);
           }
         }}
-        onClearNotification={(id) => setNotifications(prev => prev.filter(n => n.id !== id))}
+        onClearNotification={(id) => {
+          setNotifications(prev => prev.filter(n => n.id !== id));
+          deleteNotificationInDb(id);
+        }}
       />
 
       {/* Main Content Router */}

@@ -412,3 +412,39 @@ export async function addCommentToSupabase(pinId, userId, authorName, authorAvat
     time: 'Justo ahora'
   };
 }
+/**
+ * Real Notifications Operations
+ */
+export async function fetchUserNotifications(userId) {
+  if (!isSupabaseConfigured || !supabase || !userId) return [];
+  try {
+    const { data } = await supabase
+      .from('notifications')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(30);
+    return data || [];
+  } catch (e) {
+    console.error('Error fetching notifications:', e);
+    return [];
+  }
+}
+
+export async function markNotificationsAsReadInDb(userId) {
+  if (!isSupabaseConfigured || !supabase || !userId) return;
+  try {
+    await supabase.from('notifications').update({ read: true }).eq('user_id', userId).eq('read', false);
+  } catch (e) {
+    console.error('Error marking notifications read:', e);
+  }
+}
+
+export async function deleteNotificationInDb(notificationId) {
+  if (!isSupabaseConfigured || !supabase || !notificationId) return;
+  try {
+    await supabase.from('notifications').delete().eq('id', notificationId);
+  } catch (e) {
+    console.error('Error deleting notification:', e);
+  }
+}
