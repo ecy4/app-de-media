@@ -340,21 +340,29 @@ export async function togglePinLikeInDb(userId, pinId) {
     
     // Send real-time notification to pin owner
     try {
-      const [{ data: pinData }, { data: senderData }] = await Promise.all([
-        supabase.from('pins').select('user_id, title').eq('id', pinId).maybeSingle(),
-        supabase.from('profiles').select('full_name, avatar_url').eq('id', userId).maybeSingle()
-      ]);
+      const { data: pinData } = await supabase
+        .from('pins')
+        .select('user_id, title')
+        .eq('id', pinId)
+        .maybeSingle();
 
-      if (pinData?.user_id && pinData.user_id !== userId && senderData) {
-        await supabase.from('notifications').insert({
+      const { data: senderData } = await supabase
+        .from('profiles')
+        .select('full_name, avatar_url')
+        .eq('id', userId)
+        .maybeSingle();
+
+      if (pinData?.user_id && pinData.user_id !== userId) {
+        const { error: notifErr } = await supabase.from('notifications').insert({
           user_id: pinData.user_id,
           sender_id: userId,
-          sender_name: senderData.full_name || 'Alguien',
-          sender_avatar: senderData.avatar_url,
+          sender_name: senderData?.full_name || 'Un usuario',
+          sender_avatar: senderData?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${userId}`,
           pin_id: pinId,
           type: 'like',
           message: `le dio me gusta a tu pin "${pinData.title?.slice(0, 30) || 'Publicación'}" ❤️`
         });
+        if (notifErr) console.error('Error inserting like notification:', notifErr);
       }
     } catch (e) {
       console.warn('Could not send like notification:', e);
@@ -400,21 +408,29 @@ export async function togglePinSaveInDb(userId, pinId) {
 
     // Send real-time notification to pin owner
     try {
-      const [{ data: pinData }, { data: senderData }] = await Promise.all([
-        supabase.from('pins').select('user_id, title').eq('id', pinId).maybeSingle(),
-        supabase.from('profiles').select('full_name, avatar_url').eq('id', userId).maybeSingle()
-      ]);
+      const { data: pinData } = await supabase
+        .from('pins')
+        .select('user_id, title')
+        .eq('id', pinId)
+        .maybeSingle();
 
-      if (pinData?.user_id && pinData.user_id !== userId && senderData) {
-        await supabase.from('notifications').insert({
+      const { data: senderData } = await supabase
+        .from('profiles')
+        .select('full_name, avatar_url')
+        .eq('id', userId)
+        .maybeSingle();
+
+      if (pinData?.user_id && pinData.user_id !== userId) {
+        const { error: notifErr } = await supabase.from('notifications').insert({
           user_id: pinData.user_id,
           sender_id: userId,
-          sender_name: senderData.full_name || 'Alguien',
-          sender_avatar: senderData.avatar_url,
+          sender_name: senderData?.full_name || 'Un usuario',
+          sender_avatar: senderData?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${userId}`,
           pin_id: pinId,
           type: 'save',
           message: `guardó tu pin "${pinData.title?.slice(0, 30) || 'Publicación'}" en su colección 📌`
         });
+        if (notifErr) console.error('Error inserting save notification:', notifErr);
       }
     } catch (e) {
       console.warn('Could not send save notification:', e);
@@ -458,15 +474,16 @@ export async function addCommentToSupabase(pinId, userId, authorName, authorAvat
       .maybeSingle();
 
     if (pinData?.user_id && pinData.user_id !== userId) {
-      await supabase.from('notifications').insert({
+      const { error: notifErr } = await supabase.from('notifications').insert({
         user_id: pinData.user_id,
         sender_id: userId,
-        sender_name: sanitizeInput(authorName),
-        sender_avatar: authorAvatar,
+        sender_name: sanitizeInput(authorName) || 'Un usuario',
+        sender_avatar: authorAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${userId}`,
         pin_id: pinId,
         type: 'comment',
         message: `comentó en tu pin "${pinData.title?.slice(0, 25) || 'Publicación'}": "${cleanText.slice(0, 35)}..." 💬`
       });
+      if (notifErr) console.error('Error inserting comment notification:', notifErr);
     }
   } catch (e) {
     console.warn('Could not send comment notification:', e);
