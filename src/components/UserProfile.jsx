@@ -173,91 +173,105 @@ export default function UserProfile({
         </button>
       )}
 
-      {/* Profile Header */}
-      <div className="flex flex-col items-center text-center max-w-xl mx-auto mb-8">
-        {/* Avatar */}
-        <div className="relative group mb-3">
-          <img
-            src={displayAvatar}
-            alt={displayName}
-            className="w-28 h-28 sm:w-32 sm:h-32 rounded-full object-cover ring-4 ring-gray-100 shadow-md transition-transform group-hover:scale-105"
-          />
-          {displayRole === 'admin' && (
-            <span className="absolute bottom-1 right-1 bg-red-600 text-white text-[10px] font-black uppercase px-2 py-0.5 rounded-full shadow-md">
-              Admin
-            </span>
-          )}
+      {/* Profile Container */}
+      <div className="relative mb-10 max-w-4xl mx-auto">
+        {/* Cover Banner */}
+        <div className="h-44 sm:h-56 w-full rounded-3xl bg-gradient-to-r from-red-600 via-rose-500 to-amber-500 shadow-md relative overflow-hidden">
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-white/20 via-transparent to-black/20" />
+          <div className="absolute -right-8 -bottom-8 w-48 h-48 bg-white/10 rounded-full blur-2xl pointer-events-none" />
         </div>
 
-        {/* User Info */}
-        <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">
-          {displayName}
-        </h1>
-        <p className="text-sm font-semibold text-gray-500 mt-0.5">
-          @{displayHandle}
-        </p>
-
-        {/* Bio */}
-        <p className="text-xs sm:text-sm text-gray-700 mt-2 max-w-md leading-relaxed">
-          {displayBio}
-        </p>
-
-        {/* Website link */}
-        {displayWebsite && (
-          <a
-            href={displayWebsite.startsWith('http') ? displayWebsite : `https://${displayWebsite}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-2 text-xs font-semibold text-[#E60023] hover:underline flex items-center gap-1"
-          >
-            <Globe className="w-3.5 h-3.5" />
-            <span>{displayWebsite.replace(/^https?:\/\//, '')}</span>
-          </a>
-        )}
-
-        {/* Real Stats from Database */}
-        <div className="flex items-center gap-4 mt-3 text-xs sm:text-sm font-semibold text-gray-600">
-          <span>
-            <strong className="text-gray-900">{createdPins.length}</strong> creados
-          </span>
-          {isSelf && (
-            <>
-              <span>•</span>
-              <span>
-                <strong className="text-gray-900">{savedPins.length}</strong> guardados
+        {/* Profile Card Header */}
+        <div className="relative px-6 pb-6 pt-0 -mt-20 sm:-mt-24 flex flex-col items-center text-center">
+          {/* Avatar with ring & glow */}
+          <div className="relative group mb-4">
+            <div className="p-1 bg-white rounded-full shadow-xl ring-4 ring-white/60">
+              <img
+                src={displayAvatar}
+                alt={displayName}
+                className="w-28 h-28 sm:w-36 sm:h-36 rounded-full object-cover shadow-inner transition-transform duration-300 group-hover:scale-105"
+              />
+            </div>
+            {displayRole === 'admin' && (
+              <span className="absolute bottom-1 right-1 bg-gradient-to-r from-red-600 to-rose-600 text-white text-[10px] font-black tracking-wider uppercase px-2.5 py-0.5 rounded-full shadow-lg ring-2 ring-white">
+                Admin
               </span>
-            </>
-          )}
-          <span>•</span>
-          <span>
-            <strong className="text-gray-900">{followStats.followersCount}</strong> seguidores
-          </span>
-          <span>•</span>
-          <span>
-            <strong className="text-gray-900">{followStats.followingCount}</strong> seguidos
-          </span>
-        </div>
+            )}
+          </div>
 
-        {/* Action Buttons */}
-        <div className="flex items-center gap-2 mt-4">
-          {isSelf ? (
-            <>
-              <button
-                onClick={() => setIsEditModalOpen(true)}
-                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-full text-xs font-bold flex items-center gap-1.5 transition-colors"
-              >
-                <Edit3 className="w-3.5 h-3.5" />
-                <span>Editar perfil</span>
-              </button>
-              <button
-                onClick={onOpenCreatePin}
-                className="px-4 py-2 bg-[#E60023] hover:bg-[#ad081b] text-white rounded-full text-xs font-bold flex items-center gap-1.5 shadow-sm transition-colors"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Crear Pin</span>
-              </button>
-            </>
-          ) : (
+          {/* User Info */}
+          <h1 className="text-2xl sm:text-4xl font-black text-gray-900 tracking-tight">
+            {displayName}
+          </h1>
+          <p className="text-sm font-bold text-gray-400 mt-1">
+            @{displayHandle}
+          </p>
+
+          {/* Bio */}
+          <p className="text-xs sm:text-sm text-gray-600 mt-3 max-w-md leading-relaxed font-normal">
+            {displayBio}
+          </p>
+
+          {/* Website link */}
+          {displayWebsite && (
+            <a
+              href={displayWebsite.startsWith('http') ? displayWebsite : `https://${displayWebsite}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-3 text-xs font-bold text-[#E60023] hover:underline flex items-center gap-1.5 bg-red-50 hover:bg-red-100/80 px-3 py-1 rounded-full transition-colors"
+            >
+              <Globe className="w-3.5 h-3.5" />
+              <span>{displayWebsite.replace(/^https?:\/\//, '')}</span>
+            </a>
+          )}
+
+          {/* Modern Floating Stats Bar */}
+          <div className="flex items-center gap-2 sm:gap-6 mt-5 p-2 px-4 sm:px-6 bg-white/80 backdrop-blur-xl border border-gray-100 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.06)] rounded-2xl text-xs sm:text-sm font-semibold text-gray-600">
+            <div className="px-3 py-1 text-center">
+              <strong className="block text-base sm:text-lg font-black text-gray-900">{createdPins.length}</strong>
+              <span className="text-[11px] text-gray-400 font-medium">Publicaciones</span>
+            </div>
+            {isSelf && (
+              <>
+                <div className="w-[1px] h-7 bg-gray-100" />
+                <div className="px-3 py-1 text-center">
+                  <strong className="block text-base sm:text-lg font-black text-gray-900">{savedPins.length}</strong>
+                  <span className="text-[11px] text-gray-400 font-medium">Guardados</span>
+                </div>
+              </>
+            )}
+            <div className="w-[1px] h-7 bg-gray-100" />
+            <div className="px-3 py-1 text-center">
+              <strong className="block text-base sm:text-lg font-black text-gray-900">{followStats.followersCount}</strong>
+              <span className="text-[11px] text-gray-400 font-medium">Seguidores</span>
+            </div>
+            <div className="w-[1px] h-7 bg-gray-100" />
+            <div className="px-3 py-1 text-center">
+              <strong className="block text-base sm:text-lg font-black text-gray-900">{followStats.followingCount}</strong>
+              <span className="text-[11px] text-gray-400 font-medium">Siguiendo</span>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex items-center gap-2.5 mt-5">
+            {isSelf ? (
+              <>
+                <button
+                  onClick={() => setIsEditModalOpen(true)}
+                  className="px-5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-full text-xs font-bold flex items-center gap-2 transition-all active:scale-95 shadow-sm"
+                >
+                  <Edit3 className="w-3.5 h-3.5" />
+                  <span>Editar perfil</span>
+                </button>
+                <button
+                  onClick={onOpenCreatePin}
+                  className="px-5 py-2.5 bg-[#E60023] hover:bg-[#ad081b] text-white rounded-full text-xs font-bold flex items-center gap-2 shadow-md shadow-red-600/20 transition-all active:scale-95"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Crear Pin</span>
+                </button>
+              </>
+            ) : (
             <button
               onClick={handleFollowToggle}
               disabled={loadingFollow}

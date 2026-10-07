@@ -263,78 +263,95 @@ export default function AdminDashboard({
 
   return (
     <div className="max-w-[1920px] mx-auto px-4 sm:px-8 py-6 animate-fadeIn">
-      {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-gray-100 mb-8">
-        <div>
-          <div className="flex items-center gap-2">
-            <div className="p-2 bg-red-100 text-[#E60023] rounded-xl">
-              <ShieldCheck className="w-6 h-6" />
-            </div>
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-black text-gray-900">
-                Panel de Administración
-              </h1>
-              <p className="text-xs text-gray-500">
-                Supervisión general, moderación de contenido y control de usuarios reales en Supabase
-              </p>
-            </div>
+      {/* Top Header Card */}
+      <div className="bg-gradient-to-r from-neutral-900 via-neutral-800 to-neutral-900 text-white rounded-3xl p-6 sm:p-8 mb-8 shadow-xl relative overflow-hidden flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+        <div className="relative z-10">
+          <div className="inline-flex items-center gap-2 px-3 py-1 bg-red-600/30 border border-red-500/40 rounded-full text-red-300 text-xs font-bold mb-3">
+            <ShieldCheck className="w-4 h-4 text-red-400" />
+            <span>Centro de Control Maestro</span>
           </div>
+          <h1 className="text-2xl sm:text-4xl font-black tracking-tight">
+            Panel de Administración
+          </h1>
+          <p className="text-xs sm:text-sm text-neutral-400 mt-1 max-w-xl">
+            Supervisión integral de contenido, moderación de reportes comunitarios y control de usuarios en tiempo real.
+          </p>
         </div>
 
         <button
           onClick={onClose}
-          className="self-start sm:self-auto px-5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-full text-xs font-bold transition-all"
+          className="relative z-10 self-start sm:self-auto px-5 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-full text-xs font-bold transition-all backdrop-blur-md active:scale-95"
         >
           Volver al Feed
         </button>
+
+        <div className="absolute right-0 top-0 w-80 h-80 bg-red-600/10 rounded-full blur-3xl pointer-events-none" />
       </div>
 
       {/* Metrics Row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <div className="p-5 bg-white border border-gray-100 rounded-3xl shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between text-gray-500 text-xs font-bold uppercase mb-2">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
+        <div className="p-5 sm:p-6 bg-white border border-gray-100 rounded-3xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] hover:shadow-lg transition-all group">
+          <div className="flex items-center justify-between text-gray-500 text-xs font-bold uppercase mb-3">
             <span>Total Pines</span>
-            <ImageIcon className="w-4 h-4 text-blue-500" />
+            <div className="p-2 bg-blue-50 text-blue-600 rounded-xl group-hover:scale-110 transition-transform">
+              <ImageIcon className="w-4 h-4" />
+            </div>
           </div>
-          <p className="text-2xl sm:text-3xl font-black text-gray-900">{pins.length}</p>
-          <span className="text-[11px] text-emerald-600 font-semibold mt-1 inline-block">
-            ● Base de datos Supabase
-          </span>
+          <p className="text-3xl sm:text-4xl font-black text-gray-900">{pins.length}</p>
+          <div className="flex items-center gap-1.5 mt-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="text-[11px] text-gray-500 font-semibold">
+              Sincronizado con Supabase
+            </span>
+          </div>
         </div>
 
-        <div className="p-5 bg-white border border-gray-100 rounded-3xl shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between text-gray-500 text-xs font-bold uppercase mb-2">
-            <span>Usuarios Registrados</span>
-            <Users className="w-4 h-4 text-purple-500" />
+        <div className="p-5 sm:p-6 bg-white border border-gray-100 rounded-3xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] hover:shadow-lg transition-all group">
+          <div className="flex items-center justify-between text-gray-500 text-xs font-bold uppercase mb-3">
+            <span>Usuarios Reales</span>
+            <div className="p-2 bg-purple-50 text-purple-600 rounded-xl group-hover:scale-110 transition-transform">
+              <Users className="w-4 h-4" />
+            </div>
           </div>
-          <p className="text-2xl sm:text-3xl font-black text-gray-900">{usersList.length}</p>
-          <span className="text-[11px] text-emerald-600 font-semibold mt-1 inline-block">
-            ● Perfiles en tabla profiles
-          </span>
+          <p className="text-3xl sm:text-4xl font-black text-gray-900">{usersList.length}</p>
+          <div className="flex items-center gap-1.5 mt-2">
+            <span className="w-2 h-2 rounded-full bg-purple-500" />
+            <span className="text-[11px] text-gray-500 font-semibold">
+              Perfiles registrados
+            </span>
+          </div>
         </div>
 
-        <div className="p-5 bg-white border border-gray-100 rounded-3xl shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between text-gray-500 text-xs font-bold uppercase mb-2">
+        <div className="p-5 sm:p-6 bg-white border border-gray-100 rounded-3xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] hover:shadow-lg transition-all group">
+          <div className="flex items-center justify-between text-gray-500 text-xs font-bold uppercase mb-3">
             <span>Comentarios</span>
-            <MessageSquare className="w-4 h-4 text-amber-500" />
+            <div className="p-2 bg-amber-50 text-amber-600 rounded-xl group-hover:scale-110 transition-transform">
+              <MessageSquare className="w-4 h-4" />
+            </div>
           </div>
-          <p className="text-2xl sm:text-3xl font-black text-gray-900">{totalComments}</p>
-          <span className="text-[11px] text-gray-500 font-semibold mt-1 inline-block">
-            ● Moderados
-          </span>
+          <p className="text-3xl sm:text-4xl font-black text-gray-900">{totalComments}</p>
+          <div className="flex items-center gap-1.5 mt-2">
+            <span className="w-2 h-2 rounded-full bg-amber-500" />
+            <span className="text-[11px] text-gray-500 font-semibold">
+              En publicaciones
+            </span>
+          </div>
         </div>
 
-        <div className="p-5 bg-white border border-gray-100 rounded-3xl shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between text-gray-500 text-xs font-bold uppercase mb-2">
-            <span>Interacciones Totales</span>
-            <TrendingUp className="w-4 h-4 text-[#E60023]" />
+        <div className="p-5 sm:p-6 bg-white border border-gray-100 rounded-3xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] hover:shadow-lg transition-all group">
+          <div className="flex items-center justify-between text-gray-500 text-xs font-bold uppercase mb-3">
+            <span>Pines Ocultos</span>
+            <div className="p-2 bg-rose-50 text-rose-600 rounded-xl group-hover:scale-110 transition-transform">
+              <EyeOff className="w-4 h-4" />
+            </div>
           </div>
-          <p className="text-2xl sm:text-3xl font-black text-gray-900">
-            {totalLikes > 1000 ? `${(totalLikes / 1000).toFixed(1)}k` : totalLikes}
-          </p>
-          <span className="text-[11px] text-emerald-600 font-semibold mt-1 inline-block">
-            ● Actividad en vivo
-          </span>
+          <p className="text-3xl sm:text-4xl font-black text-gray-900">{hiddenPinsCount}</p>
+          <div className="flex items-center gap-1.5 mt-2">
+            <span className={`w-2 h-2 rounded-full ${hiddenPinsCount > 0 ? 'bg-rose-500' : 'bg-emerald-500'}`} />
+            <span className="text-[11px] text-gray-500 font-semibold">
+              {hiddenPinsCount > 0 ? 'Baneados / Archivados' : 'Cero infracciones'}
+            </span>
+          </div>
         </div>
       </div>
 
