@@ -549,7 +549,7 @@ export default function PinDetailModal({
                 {showAccessMenu && (
                   <div className="absolute top-full left-0 mt-2 w-48 bg-neutral-900 border border-neutral-800 rounded-xl shadow-2xl py-2 z-50">
                     <button onClick={() => { setAccessibilityMode('normal'); setShowAccessMenu(false); }} className="w-full text-left px-4 py-2 text-xs text-white hover:bg-neutral-800">Normal</button>
-                    <button onClick={() => { setAccessibilityMode('grayscale'); setShowAccessMenu(false); }} className="w-full text-left px-4 py-2 text-xs text-white hover:bg-neutral-800">Escala de Grises (G)</button>
+                    <button onClick={() => { setAccessibilityMode('grayscale'); setShowAccessMenu(false); }} className="w-full text-left px-4 py-2 text-xs text-white hover:bg-neutral-800">Blanco y Negro (G)</button>
                     <button onClick={() => { setAccessibilityMode('protanopia'); setShowAccessMenu(false); }} className="w-full text-left px-4 py-2 text-xs text-white hover:bg-neutral-800">Protanopía (Sin Rojo)</button>
                     <button onClick={() => { setAccessibilityMode('deuteranopia'); setShowAccessMenu(false); }} className="w-full text-left px-4 py-2 text-xs text-white hover:bg-neutral-800">Deuteranopía (Sin Verde)</button>
                     <button onClick={() => { setAccessibilityMode('tritanopia'); setShowAccessMenu(false); }} className="w-full text-left px-4 py-2 text-xs text-white hover:bg-neutral-800">Tritanopía (Sin Azul)</button>
@@ -697,10 +697,8 @@ export default function PinDetailModal({
                   loop
                   playsInline
                   onLoadedMetadata={(e) => setDimensions({ width: e.target.videoWidth, height: e.target.videoHeight })}
-                  className={`max-h-[82vh] w-auto object-contain rounded-2xl transition-all duration-300 relative z-10 ${
-                    accessibilityMode === 'grayscale' ? 'grayscale contrast-125' : ''
-                  }`}
-                  style={{ filter: accessibilityMode !== 'normal' && accessibilityMode !== 'grayscale' ? `url(#${accessibilityMode})` : 'none' }}
+                  className="max-h-[82vh] w-auto object-contain rounded-2xl transition-all duration-300 relative z-10"
+                  style={{ filter: accessibilityMode === 'grayscale' ? 'grayscale(100%) contrast(125%)' : (accessibilityMode !== 'normal' ? `url(#${accessibilityMode})` : 'none') }}
                 />
               ) : (
                 <img
@@ -709,10 +707,8 @@ export default function PinDetailModal({
                   alt={pin.title}
                   crossOrigin="anonymous"
                   onLoad={(e) => setDimensions({ width: e.target.naturalWidth, height: e.target.naturalHeight })}
-                  className={`max-h-[82vh] w-auto object-contain rounded-2xl transition-all duration-300 drop-shadow-md relative z-10 ${
-                    accessibilityMode === 'grayscale' ? 'grayscale contrast-125' : ''
-                  }`}
-                  style={{ filter: accessibilityMode !== 'normal' && accessibilityMode !== 'grayscale' ? `url(#${accessibilityMode})` : 'none' }}
+                  className="max-h-[82vh] w-auto object-contain rounded-2xl transition-all duration-300 drop-shadow-md relative z-10"
+                  style={{ filter: accessibilityMode === 'grayscale' ? 'grayscale(100%) contrast(125%)' : (accessibilityMode !== 'normal' ? `url(#${accessibilityMode})` : 'none') }}
                 />
               )}
               
