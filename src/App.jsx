@@ -98,11 +98,16 @@ function AppContent() {
     return () => clearInterval(interval);
   }, [user?.id, healthStatus.connected]);
 
-  // 3. Fetch Dynamic Media from API (returns empty if no keys configured)
-  const loadLiveMedia = useCallback(async (cat, q) => {
+  // 3. Fetch Dynamic Media from API (60 for Home, 100 for Explore)
+  const loadLiveMedia = useCallback(async (cat, q, view) => {
     setIsLoadingMedia(true);
+    const count = view === 'explore' ? 100 : 60;
     try {
-      const fetched = await fetchFeedMedia({ category: cat, query: q, perPage: 24 });
+      const fetched = await fetchFeedMedia({ 
+        category: cat, 
+        query: q, 
+        perPage: count 
+      });
       setApiPins(fetched || []);
     } catch (err) {
       console.error('Error fetching live media:', err);
@@ -113,8 +118,8 @@ function AppContent() {
   }, []);
 
   useEffect(() => {
-    loadLiveMedia(selectedCategory, searchQuery);
-  }, [selectedCategory, searchQuery, loadLiveMedia]);
+    loadLiveMedia(selectedCategory, searchQuery, activeView);
+  }, [selectedCategory, searchQuery, activeView, loadLiveMedia]);
 
   // Combined Pins (Database Pins + API Media)
   const allPins = useMemo(() => {
