@@ -150,26 +150,50 @@ async function fetchPixabayProvider({ searchTerm, category, orientation = 'all',
   };
 
   const imageCount = perPage;
-  const imageQueryUrl = `https://pixabay.com/api/?key=${encodeURIComponent(PIXABAY_KEY)}&q=${encodeURIComponent(searchTerm || 'graphic design branding mockup')}&image_type=photo${orientationParam}&per_page=${imageCount}&page=${page}&safesearch=true`;
-  
-  const shouldFetchVideos = orientation !== 'vertical';
-  const videoPromises = shouldFetchVideos
-    ? fetch(`https://pixabay.com/api/videos/?key=${encodeURIComponent(PIXABAY_KEY)}&q=${encodeURIComponent(searchTerm || 'abstract motion graphics')}&per_page=3&page=${page}&safesearch=true`).catch(() => null)
-    : Promise.resolve(null);
+  const qStr = encodeURIComponent(searchTerm || 'graphic design branding mockup');
 
-  const [imageRes, videoRes] = await Promise.all([
-    fetch(imageQueryUrl),
-    videoPromises
-  ]);
+  // 1. Fetch images with Spanish support first, then English fallback
+  try {
+    const esUrl = `https://pixabay.com/api/?key=${encodeURIComponent(PIXABAY_KEY)}&q=${qStr}&lang=es&image_type=all${orientationParam}&per_page=${imageCount}&page=${page}&safesearch=true`;
+    let imageRes = await fetch(esUrl);
+    let imageData = imageRes.ok ? await imageRes.json() : null;
 
-  if (imageRes.ok) {
-    const data = await imageRes.json();
-    (data.hits || []).forEach((item, idx) => results.push(mapPixabayItem(item, false, idx)));
+    if (!imageData?.hits || imageData.hits.length === 0) {
+      const enUrl = `https://pixabay.com/api/?key=${encodeURIComponent(PIXABAY_KEY)}&q=${qStr}&lang=en&image_type=all${orientationParam}&per_page=${imageCount}&page=${page}&safesearch=true`;
+      const fallbackRes = await fetch(enUrl);
+      if (fallbackRes.ok) {
+        imageData = await fallbackRes.json();
+      }
+    }
+
+    if (imageData?.hits) {
+      imageData.hits.forEach((item, idx) => results.push(mapPixabayItem(item, false, idx)));
+    }
+  } catch (err) {
+    console.warn('[LayoutHub MultiProvider] Pixabay image fetch error:', err.message);
   }
 
-  if (videoRes && videoRes.ok) {
-    const vData = await videoRes.json();
-    (vData.hits || []).forEach((item, idx) => results.push(mapPixabayItem(item, true, idx)));
+  // 2. Fetch video motion graphics (page 1 only)
+  if (orientation !== 'vertical' && page === 1) {
+    try {
+      const videoEsUrl = `https://pixabay.com/api/videos/?key=${encodeURIComponent(PIXABAY_KEY)}&q=${qStr}&lang=es&per_page=3&safesearch=true`;
+      let videoRes = await fetch(videoEsUrl);
+      let videoData = videoRes.ok ? await videoRes.json() : null;
+
+      if (!videoData?.hits || videoData.hits.length === 0) {
+        const videoEnUrl = `https://pixabay.com/api/videos/?key=${encodeURIComponent(PIXABAY_KEY)}&q=${qStr}&lang=en&per_page=3&safesearch=true`;
+        const videoEnRes = await fetch(videoEnUrl);
+        if (videoEnRes.ok) {
+          videoData = await videoEnRes.json();
+        }
+      }
+
+      if (videoData?.hits) {
+        videoData.hits.forEach((item, idx) => results.push(mapPixabayItem(item, true, idx)));
+      }
+    } catch {
+      // videos optional
+    }
   }
 
   return results;
@@ -309,7 +333,9 @@ function getOpenFallbackProvider({ searchTerm, category, orientation = 'all', pa
 
     items.push(normalizeMediaItem({
       id: `picsum-${seed}-${page}-${i}`,
-      title: `${searchTerm ? searchTerm.toUpperCase() : 'Layout & Branding Inspiration'} #${seed}`,
+      title: searchTerm 
+        ? `${searchTerm.charAt(0).toUpperCase() + searchTerm.slice(1)} (Referencia #${seed % 100})`
+        : `Inspiración Visual #${seed % 100}`,
       type: 'image',
       mediaUrl: `https://picsum.photos/seed/${seed}/${width}/${height}`,
       thumbnail: `https://picsum.photos/seed/${seed}/400/${Math.floor(height / 2)}`,
@@ -370,13 +396,7 @@ export async function fetchFeedMedia({
     );
   }
 
-  // 3. Openverse (Always active, no API key needed)
-  providerPromises.push(
-    fetchOpenverseProvider(queryParams).catch(err => {
-      console.warn('[LayoutHub MultiProvider] Openverse failed:', err.message);
-      return [];
-    })
-  );
+
 
   let settledResults = [];
   if (providerPromises.length > 0) {
