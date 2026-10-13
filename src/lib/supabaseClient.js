@@ -20,6 +20,9 @@ export const supabase = isSupabaseConfigured
   ? createClient(supabaseUrl, supabaseAnonKey)
   : null;
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+export const isValidUuid = (id) => typeof id === 'string' && UUID_REGEX.test(id);
+
 /**
  * Health Check: Verifies live connectivity with Supabase Database
  */
@@ -215,7 +218,7 @@ export async function createSupabasePin(pinPayload) {
  * Real Followers / Following Database Queries
  */
 export async function fetchCreatorFollowStats(creatorId) {
-  if (!isSupabaseConfigured || !supabase || !creatorId) {
+  if (!isSupabaseConfigured || !supabase || !creatorId || !isValidUuid(creatorId)) {
     return { followersCount: 0, followingCount: 0 };
   }
 
@@ -230,13 +233,20 @@ export async function fetchCreatorFollowStats(creatorId) {
       followingCount: followingRes.count || 0
     };
   } catch (e) {
-    console.error('Error fetching follow stats:', e);
     return { followersCount: 0, followingCount: 0 };
   }
 }
 
 export async function checkIsFollowingUser(currentUserId, targetCreatorId) {
-  if (!isSupabaseConfigured || !supabase || !currentUserId || !targetCreatorId || currentUserId === targetCreatorId) {
+  if (
+    !isSupabaseConfigured || 
+    !supabase || 
+    !currentUserId || 
+    !targetCreatorId || 
+    currentUserId === targetCreatorId ||
+    !isValidUuid(currentUserId) ||
+    !isValidUuid(targetCreatorId)
+  ) {
     return false;
   }
 
@@ -257,6 +267,10 @@ export async function checkIsFollowingUser(currentUserId, targetCreatorId) {
 export async function toggleFollowUser(currentUserId, targetCreatorId) {
   if (!isSupabaseConfigured || !supabase || !currentUserId || !targetCreatorId) {
     throw new Error('Debes iniciar sesión para seguir a un usuario.');
+  }
+
+  if (!isValidUuid(currentUserId) || !isValidUuid(targetCreatorId)) {
+    throw new Error('Solo puedes seguir a creadores registrados en la plataforma.');
   }
 
   const isFollowing = await checkIsFollowingUser(currentUserId, targetCreatorId);
@@ -404,7 +418,7 @@ export async function fetchUserSavedPinIdsOnly(userId) {
 }
 
 export async function fetchUserBoards(userId) {
-  if (!isSupabaseConfigured || !supabase || !userId) return [];
+  if (!isSupabaseConfigured || !supabase || !userId || !isValidUuid(userId)) return [];
   try {
     const { data, error } = await supabase
       .from('boards')
@@ -412,7 +426,6 @@ export async function fetchUserBoards(userId) {
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
     if (error) {
-      console.warn('Error fetching boards:', error);
       return [];
     }
     return data || [];

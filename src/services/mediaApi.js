@@ -207,16 +207,31 @@ async function fetchUnsplashProvider({ searchTerm, category, orientation = 'all'
     return [];
   }
 
+  // Preserve Unsplash free demo rate limit (50 reqs/hr) by only fetching first 3 pages
+  if (page > 3) {
+    return [];
+  }
+
+  // Unsplash maximum allowed per_page is 30
+  const safePerPage = Math.min(perPage || 20, 25);
+
+  // Keep search term concise (2-3 words) to prevent Unsplash search index timeouts (HTTP 503)
+  const cleanTerm = (searchTerm || 'branding design mockup')
+    .split(/\s+/)
+    .slice(0, 3)
+    .join(' ');
+
   let unsplashOri = '';
   if (orientation === 'vertical') unsplashOri = '&orientation=portrait';
   if (orientation === 'horizontal') unsplashOri = '&orientation=landscape';
 
-  const res = await fetch(
-    `https://api.unsplash.com/search/photos?query=${encodeURIComponent(searchTerm || 'branding design typography poster mockup')}${unsplashOri}&page=${page}&per_page=${perPage}&client_id=${encodeURIComponent(UNSPLASH_KEY)}`
-  );
+  try {
+    const res = await fetch(
+      `https://api.unsplash.com/search/photos?query=${encodeURIComponent(cleanTerm)}${unsplashOri}&page=${page}&per_page=${safePerPage}&client_id=${encodeURIComponent(UNSPLASH_KEY)}`
+    );
 
-  if (!res.ok) throw new Error(`Unsplash error: ${res.status}`);
-  const data = await res.json();
+    if (!res.ok) return [];
+    const data = await res.json();
 
   return (data.results || []).map((item, idx) => {
     const aspect = item.height > item.width * 1.3 ? 'aspect-[2/3]' : item.width > item.height * 1.3 ? 'aspect-[16/9]' : 'aspect-[3/4]';
@@ -240,6 +255,9 @@ async function fetchUnsplashProvider({ searchTerm, category, orientation = 'all'
       sourceProvider: 'unsplash'
     });
   });
+  } catch (err) {
+    return [];
+  }
 }
 
 /**
@@ -389,10 +407,7 @@ export async function fetchFeedMedia({
   // 2. Unsplash
   if (UNSPLASH_KEY && UNSPLASH_KEY !== 'tu-unsplash-access-key') {
     providerPromises.push(
-      fetchUnsplashProvider(queryParams).catch(err => {
-        console.warn('[LayoutHub MultiProvider] Unsplash failed:', err.message);
-        return [];
-      })
+      fetchUnsplashProvider(queryParams).catch(() => [])
     );
   }
 
